@@ -40,10 +40,13 @@ class BaseAgent(ABC):
     @abstractmethod
     def update_target(self, model, target_model):
         """
-        Update target network with Polyak Averaging:
+        Update target network with Polyak Averaging towards main network:
 
-        θ_target ← τ * θ_source + (1 - τ) * θ_target
-        :param model:
-        :param target_model:
-        :return:
+        θ_target ← τ * θ_main + (1 - τ) * θ_target
+
+        Tau is between 0 and 1, usually close to 0.
+        :param model: The main network.
+        :param target_model: The target network.
+        :return: The updated target network.
         """
+        pass
