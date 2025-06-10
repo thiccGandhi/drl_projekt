@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 
+
 class BaseAgent(ABC):
     """
     Abstract base class for all agents.
@@ -26,6 +27,7 @@ class BaseAgent(ABC):
         self.tau = config.tau
         self.batch_size = config.batch_size
 
+
     @abstractmethod
     def select_action(self, obs, noise=0.0):
         """
@@ -38,15 +40,28 @@ class BaseAgent(ABC):
 
 
     @abstractmethod
-    def update_target(self, model, target_model):
+    def update_target(self, main_model, target_model):
         """
         Update target network with Polyak Averaging towards main network:
 
         θ_target ← τ * θ_main + (1 - τ) * θ_target
 
         Tau is between 0 and 1, usually close to 0.
-        :param model: The main network.
+        :param main_model: The main network.
         :param target_model: The target network.
-        :return: The updated target network.
+        """
+        target_weights = target_model.get_weights()
+        main_weights = main_model.get_weights()
+        new_weights = [
+            self.tau * mdl + (1 - self.tau) * tgt
+            for mdl, tgt in zip(main_weights, target_weights)
+        ]
+        target_model.set_weights(new_weights)
+
+
+    @abstractmethod
+    def update(self):
+        """
+        Perform a learning update of actor and critic networks using a batch from the replay buffer.
         """
         pass
