@@ -39,7 +39,11 @@ class DDPGAgent(BaseAgent):
         :return: clipped action
         """
         obs = torch.tensor(obs, dtype=torch.float32).unsqueeze(0)
-        action = self.actor(obs).numpy()[0]
+        self.actor.eval() # puts actor in evaluation mode, no training behavior (dropout, batch normalization, etc.)
+        with torch.no_grad(): # no gradient calculation, only inference not backpropagation
+            action = self.actor(obs).cpu().numpy()[0]
+        self.actor.train() # put actor back into training mode
+
         if noise > 0:
             action += noise * np.random.randn(*action.shape)
         return np.clip(action, -self.act_limit, self.act_limit) # if action is bigger than action space
