@@ -97,3 +97,5 @@ class DDPGAgent(BaseAgent):
         # Soft update target networks
         self.update_target(self.actor, self.actor_target)
         self.update_target(self.critic, self.critic_target)
+
+        return actor_loss, critic_loss
