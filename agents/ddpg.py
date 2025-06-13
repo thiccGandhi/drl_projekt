@@ -73,11 +73,11 @@ class DDPGAgent(BaseAgent):
         # Compute target Q-value
         with torch.no_grad():
             target_actions = self.actor_target(next_obs)
-            target_q = self.critic_target(torch.cat([next_obs, target_actions], dim=1))
+            target_q = self.critic_target(next_obs, target_actions)
             target = rew + self.gamma * (1 - done) * target_q # done signal to terminate
 
         # Critic (Q-function) gradient step
-        current_q = self.critic(torch.cat([obs, act], dim=1))
+        current_q = self.critic(obs, act)
         critic_loss = self.critic_loss(current_q, target)
 
         self.critic_optimizer.zero_grad()
@@ -88,7 +88,7 @@ class DDPGAgent(BaseAgent):
         # ascent because of the Deterministic Policy Gradient (DPG) Theorem
         # we want to increase expected return, so ascent
         actions_pred = self.actor(obs)
-        actor_loss = -self.critic(torch.cat([obs, actions_pred], dim=1)).mean() # -, because ascent is just negative descent (for e.g. Adam, dont know any ascent optimizers)
+        actor_loss = -self.critic(obs, actions_pred).mean() # -, because ascent is just negative descent (for e.g. Adam, dont know any ascent optimizers)
 
         self.actor_optimizer.zero_grad()
         actor_loss.backward()

@@ -23,9 +23,9 @@ class BaseAgent(ABC):
         self.critic_target = critic_target
         self.replay_buffer = replay_buffer
 
-        self.gamma = config.gamma
-        self.tau = config.tau
-        self.batch_size = config.batch_size
+        self.gamma = config["gamma"]
+        self.tau = config["tau"]
+        self.batch_size = config["batch_size"]
 
 
     @abstractmethod
@@ -50,13 +50,10 @@ class BaseAgent(ABC):
         :param main_model: The main network.
         :param target_model: The target network.
         """
-        target_weights = target_model.get_weights()
-        main_weights = main_model.get_weights()
-        new_weights = [
-            self.tau * mdl + (1 - self.tau) * tgt
-            for mdl, tgt in zip(main_weights, target_weights)
-        ]
-        target_model.set_weights(new_weights)
+        for target_param, main_param in zip(target_model.parameters(), main_model.parameters()):
+            target_param.data.copy_(
+                self.tau * main_param.data + (1.0 - self.tau) * target_param.data
+            )
 
 
     @abstractmethod

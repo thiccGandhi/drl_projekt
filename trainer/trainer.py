@@ -1,5 +1,6 @@
 import copy
-import numpy as np
+import torch
+from tqdm import tqdm
 
 class Trainer:
     """
@@ -23,17 +24,17 @@ class Trainer:
         Train the agent in the environment.
         """
 
-        while self.total_steps < self.config.max_steps:
+        while self.total_steps < self.config["max_steps"]:
             obs = self.env.reset()
             done = False
             metrics = []
 
             while not done:
                 # Action selection
-                if self.total_steps < self.config.min_steps:
+                if self.total_steps < self.config["min_steps"]:
                     act = self.env.action_space.sample() # random action because not enough in buffer
                 else:
-                    act = self.agent.select_action(obs, noise=self.config.exploration_noise) # agent policy with noise for exploration
+                    act = self.agent.select_action(obs, noise=self.config["exploration_noise"]) # agent policy with noise for exploration
 
                 # Environment Step
                 next_obs, rew, done, info = self.env.step(act)
@@ -52,7 +53,7 @@ class Trainer:
 
             # End of episode
             # Evaluate agent every n episodes
-            if self.total_episodes % self.config.eval_freq == 0:
+            if self.total_episodes % self.config["eval_freq"] == 0:
                 eval_reward = self.evaluate()
                 self.logger.log_eval(eval_reward) # idk
 
@@ -76,3 +77,47 @@ class Trainer:
             obs, rew, done, _ = self.eval_env.step(act)
             total_reward += rew
         return total_reward
+
+    def test_ddpg_training_step(self, agent, env, actor, critic, replay_buffer):
+        # Fill buffer
+        print("Filling replay buffer with 100 random transitions...")
+        for _ in tqdm(range(100), "Filling replay buffer"):
+            obs_dict = env.reset()[0]
+            obs = obs_dict["observation"]
+            done = False
+            while not done:
+                action = env.action_space.sample()
+                next_obs_dict, reward, terminated, truncated, _ = env.step(action)
+                next_obs = next_obs_dict["observation"]
+                done = terminated or truncated
+                replay_buffer.store(obs, action, reward, next_obs, done)
+                obs = next_obs
+                if done:
+                    break
+        print("Replay buffer filled.")
+
+        # Save weights
+        actor_weights_before = [p.clone() for p in actor.parameters()]
+        critic_weights_before = [p.clone() for p in critic.parameters()]
+
+        out = agent.update()
+        if out is None:
+            print("not enough in buffer")
+            return
+        actor_loss, critic_loss = out
+
+        actor_changed = any(not torch.equal(p0, p1) for p0, p1 in zip(actor_weights_before, actor.parameters()))
+        critic_changed = any(not torch.equal(p0, p1) for p0, p1 in zip(critic_weights_before, critic.parameters()))
+
+        print("Actor changed:", actor_changed)
+        print("Critic changed:", critic_changed)
+        print(f"Actor loss: {actor_loss.item():.4f} | Critic loss: {critic_loss.item():.4f}")
+
+        if actor_changed and critic_changed:
+            print("training does something")
+        else:
+            print("nothing changed")
+
+
+
+
