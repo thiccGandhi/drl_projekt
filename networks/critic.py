@@ -7,6 +7,10 @@ class Critic(nn.Module):
     Leanrs to evaluate how good a state-action pair is.
     """
     def __init__(self, obs_dim, act_dim):
+        """
+        :param obs_dim: The dimension of the observation space.
+        :param act_dim: The dimension of the action space.
+        """
         super(Critic, self).__init__()
         self.net = nn.Sequential(
             nn.Linear(obs_dim + act_dim, 256),
