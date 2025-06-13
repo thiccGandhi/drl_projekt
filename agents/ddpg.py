@@ -28,6 +28,7 @@ class DDPGAgent(BaseAgent):
         self.actor_optimizer = actor_optimizer
         self.critic_optimizer = critic_optimizer
         self.act_limit = act_limit
+        self.critic_loss = nn.MSELoss()
 
 
     def select_action(self, obs, noise=0.0):
@@ -39,7 +40,11 @@ class DDPGAgent(BaseAgent):
         :return: clipped action
         """
         obs = torch.tensor(obs, dtype=torch.float32).unsqueeze(0)
-        action = self.actor(obs).numpy()[0]
+        self.actor.eval() # puts actor in evaluation mode, no training behavior (dropout, batch normalization, etc.)
+        with torch.no_grad(): # no gradient calculation, only inference not backpropagation
+            action = self.actor(obs).cpu().numpy()[0]
+        self.actor.train() # put actor back into training mode
+
         if noise > 0:
             action += noise * np.random.randn(*action.shape)
         return np.clip(action, -self.act_limit, self.act_limit) # if action is bigger than action space
@@ -56,6 +61,7 @@ class DDPGAgent(BaseAgent):
         if self.replay_buffer.size() < self.batch_size:
             return # wait until buffer has at least batch_size entries
 
+        # sample batch of transitions
         batch = self.replay_buffer.sample(self.batch_size)
         obs = torch.tensor(batch["obs"], dtype=torch.float32)
         act = torch.tensor(batch["act"], dtype=torch.float32)
@@ -63,11 +69,33 @@ class DDPGAgent(BaseAgent):
         next_obs = torch.tensor(batch["next_obs"], dtype=torch.float32)
         done = torch.tensor(batch["done"], dtype=torch.float32)
 
-        # TODO: implement below stuff
+        # TODO: implement below stuff, guess its done?
         # Compute target Q-value
+        with torch.no_grad():
+            target_actions = self.actor_target(next_obs)
+            target_q = self.critic_target(torch.cat([next_obs, target_actions], dim=1))
+            target = rew + self.gamma * (1 - done) * target_q # done signal to terminate
 
-        # Critic update
+        # Critic (Q-function) gradient step
+        current_q = self.critic(torch.cat([obs, act], dim=1))
+        critic_loss = self.critic_loss(current_q, target)
 
-        # Actor update
+        self.critic_optimizer.zero_grad()
+        critic_loss.backward()
+        self.critic_optimizer.step()
+
+        # Actor (policy) gradient ascent step
+        # ascent because of the Deterministic Policy Gradient (DPG) Theorem
+        # we want to increase expected return, so ascent
+        actions_pred = self.actor(obs)
+        actor_loss = -self.critic(torch.cat([obs, actions_pred], dim=1)).mean() # -, because ascent is just negative descent (for e.g. Adam, dont know any ascent optimizers)
+
+        self.actor_optimizer.zero_grad()
+        actor_loss.backward()
+        self.actor_optimizer.step()
 
         # Soft update target networks
+        self.update_target(self.actor, self.actor_target)
+        self.update_target(self.critic, self.critic_target)
+
+        return actor_loss, critic_loss
