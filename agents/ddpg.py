@@ -25,11 +25,25 @@ class DDPGAgent(BaseAgent):
         :param act_limit: action limit
         """
         super().__init__(actor, critic, actor_target, critic_target, replay_buffer, config)
+
+        # Synchronize target networks with main networks at the beginning
+        # copies the weights from the actor (main network) to the actor target network. It's needed once at initialization so that both networks start with the same parameters.
+        self.actor_target.load_state_dict(self.actor.state_dict())
+        self.critic_target.load_state_dict(self.critic.state_dict())
+
         self.actor_optimizer = actor_optimizer
         self.critic_optimizer = critic_optimizer
         self.act_limit = act_limit
         self.critic_loss = nn.MSELoss()
+        self.gamma = config['gamma']
+        self.batch_size = config['batch_size']
 
+        # Optional: Set device and move models there
+        # self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        # self.actor.to(self.device)
+        # self.critic.to(self.device)
+        # self.actor_target.to(self.device)
+        # self.critic_target.to(self.device)
 
     def select_action(self, obs, noise=0.0):
         """
@@ -53,21 +67,27 @@ class DDPGAgent(BaseAgent):
     def update_target(self, main_model, target_model):
         super().update_target(main_model, target_model)
 
-
     def update(self):
         """
         Perfrom one training step for actor and critic using a sampled batch.
         """
-        if self.replay_buffer.size() < self.batch_size:
+        if self.replay_buffer.size < self.batch_size:
             return # wait until buffer has at least batch_size entries
 
         # sample batch of transitions
+        # .unsqueeze(1) ensures reward and done are shaped as [batch_size, 1] — matching critic output shape.
         batch = self.replay_buffer.sample(self.batch_size)
-        obs = torch.tensor(batch["obs"], dtype=torch.float32)
-        act = torch.tensor(batch["act"], dtype=torch.float32)
-        rew = torch.tensor(batch["rew"], dtype=torch.float32)
-        next_obs = torch.tensor(batch["next_obs"], dtype=torch.float32)
-        done = torch.tensor(batch["done"], dtype=torch.float32)
+        obs = torch.tensor(batch["obs1"], dtype=torch.float32) #.to(self.device)
+        act = torch.tensor(batch["action"], dtype=torch.float32) #.to(self.device)
+        rew = torch.tensor(batch["reward"], dtype=torch.float32).unsqueeze(1) #.to(self.device)
+        next_obs = torch.tensor(batch["obs2"], dtype=torch.float32) #.to(self.device)
+        done = torch.tensor(batch["done"], dtype=torch.float32).unsqueeze(1) #.to(self.device)
+
+        # ToDO: If goal is needed:
+        # goal = torch.tensor(batch["goal"], dtype=torch.float32)
+        # obs = torch.cat([obs, goal], dim=1)
+        # next_obs = torch.cat([next_obs, goal], dim=1)
+
 
         # TODO: implement below stuff, guess its done?
         # Compute target Q-value
@@ -99,3 +119,8 @@ class DDPGAgent(BaseAgent):
         self.update_target(self.critic, self.critic_target)
 
         return actor_loss, critic_loss
+    
+    def save(self, path):
+        torch.save(self.actor.state_dict(), f"{path}/actor.pth")
+        torch.save(self.critic.state_dict(), f"{path}/critic.pth")
+

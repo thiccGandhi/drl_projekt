@@ -58,11 +58,25 @@ class Trainer:
                 self.logger.log_eval(eval_reward) # idk
 
             # Log stuff
-            self.logger.log_episode(metrics) # idk
+            if metrics is not None:
+                self.logger.log_episode(metrics)
 
             self.total_episodes += 1
 
-
+    # this ecaluates only one episode, is that correct? 
+    # suggestions:
+    # def evaluate(self, num_episodes=5):
+    #     total_reward = 0
+    #     for _ in range(num_episodes):
+    #         obs = self.eval_env.reset()
+    #         obs = obs["observation"] if isinstance(obs, dict) else obs
+    #         done = False
+    #         while not done:
+    #             act = self.agent.select_action(obs, noise=0.0)
+    #             obs, reward, done, _ = self.eval_env.step(act)
+    #             obs = obs["observation"] if isinstance(obs, dict) else obs
+    #             total_reward += reward
+    #     return total_reward / num_episodes
     def evaluate(self):
         """
         Evaluate the agent in the evaluation environment.
@@ -90,7 +104,12 @@ class Trainer:
                 next_obs_dict, reward, terminated, truncated, _ = env.step(action)
                 next_obs = next_obs_dict["observation"]
                 done = terminated or truncated
-                replay_buffer.store(obs, action, reward, next_obs, done)
+                #replay_buffer.store(obs, action, reward, next_obs, done)
+                ###############
+                goal = obs_dict["desired_goal"]
+                replay_type = 0  # Standard transition
+                replay_buffer.store(obs, next_obs, action, reward, goal, done, replay_type)
+                ########################
                 obs = next_obs
                 if done:
                     break

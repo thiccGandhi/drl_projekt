@@ -39,7 +39,7 @@ class BaseAgent(ABC):
         pass
 
 
-    @abstractmethod
+    #@abstractmethod
     def update_target(self, main_model, target_model):
         """
         Update target network with Polyak Averaging towards main network:
