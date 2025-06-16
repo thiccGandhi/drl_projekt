@@ -5,6 +5,8 @@
   "exploration_noise": 0.1,
   "batch_size": 32,
   "learning_rate": 0.001,
+  "lr_actor": 0.001,
+  "lr_critic": 0.001,
   "discount": 0.99,
   "tau": 0.005,
   "buffer_size": 1000000,
