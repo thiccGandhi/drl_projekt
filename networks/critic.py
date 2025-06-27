@@ -18,8 +18,8 @@ class Critic(nn.Module):
         """
         super().__init__()
 
-        # Store action limit to normalize actions before concatenation
-        self.act_limit = env_params['act_limit']
+        # Convert act_limit to torch tensor ONCE, for model computations
+        self.act_limit = torch.tensor(env_params['act_limit'], dtype=torch.float32)
 
         # Input includes state + goal (if HER) + action
         input_size = env_params['obs_dim'] + env_params['goal_dim'] + env_params['action_dim'] if her \

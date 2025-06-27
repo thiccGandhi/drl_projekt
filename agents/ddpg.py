@@ -37,6 +37,7 @@ class DDPGAgent(BaseAgent):
         self.critic_loss = nn.MSELoss()
         self.gamma = config['gamma']
         self.batch_size = config['batch_size']
+        self.config = config
 
         # Optional: Set device and move models there
         # self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -49,19 +50,28 @@ class DDPGAgent(BaseAgent):
         """
         Select an action using the actor network with optional Gaussian noise.
 
-        :param obs: single observation
+        :param obs: single observation (dict with "observation" and "desired_goal" if HER; else array)
         :param noise: standard deviation of Gaussian noise
         :return: clipped action
         """
-        obs = torch.tensor(obs, dtype=torch.float32).unsqueeze(0)
-        self.actor.eval() # puts actor in evaluation mode, no training behavior (dropout, batch normalization, etc.)
-        with torch.no_grad(): # no gradient calculation, only inference not backpropagation
-            action = self.actor(obs).cpu().numpy()[0]
-        self.actor.train() # put actor back into training mode
+        # If using HER, concatenate observation and desired_goal
+        if self.config.get("her", True):
+            obs_vec = np.concatenate([obs["observation"], obs["desired_goal"]])  #FIXED
+        else:
+            # If obs is a dict (no HER), get observation only
+            obs_vec = obs["observation"] if isinstance(obs, dict) else obs
 
+        obs_torch = torch.tensor(obs_vec, dtype=torch.float32).unsqueeze(0)
+        self.actor.eval()  # Evaluation mode (no dropout, etc.)
+        with torch.no_grad():
+            action = self.actor(obs_torch).cpu().numpy()[0]
+        self.actor.train()  # Switch back to training mode
+
+        # Optionally add exploration noise
         if noise > 0:
             action += noise * np.random.randn(*action.shape)
-        return np.clip(action, -self.act_limit, self.act_limit) # if action is bigger than action space
+        # Clip to valid action range
+        return np.clip(action, -self.act_limit, self.act_limit)
 
 
     def update_target(self, main_model, target_model):
@@ -69,32 +79,38 @@ class DDPGAgent(BaseAgent):
 
     def update(self):
         """
-        Perfrom one training step for actor and critic using a sampled batch.
+        Perform one training step for actor and critic using a sampled batch.
         """
+        # Wait until buffer has at least batch_size entries
         if self.replay_buffer.size < self.batch_size:
-            return # wait until buffer has at least batch_size entries
+            return
 
-        # sample batch of transitions
-        # .unsqueeze(1) ensures reward and done are shaped as [batch_size, 1] — matching critic output shape.
+        # Sample batch of transitions from replay buffer
         batch = self.replay_buffer.sample(self.batch_size)
-        obs = torch.tensor(batch["obs1"], dtype=torch.float32) #.to(self.device)
-        act = torch.tensor(batch["action"], dtype=torch.float32) #.to(self.device)
-        rew = torch.tensor(batch["reward"], dtype=torch.float32).unsqueeze(1) #.to(self.device)
-        next_obs = torch.tensor(batch["obs2"], dtype=torch.float32) #.to(self.device)
-        done = torch.tensor(batch["done"], dtype=torch.float32).unsqueeze(1) #.to(self.device)
 
-        # ToDO: If goal is needed:
-        # goal = torch.tensor(batch["goal"], dtype=torch.float32)
-        # obs = torch.cat([obs, goal], dim=1)
-        # next_obs = torch.cat([next_obs, goal], dim=1)
+        # If using HER, concatenate goal to obs and next_obs
+        if self.config.get("her", True):  # <--- FIXED/IMPORTANT
+            obs = torch.tensor(
+                np.concatenate([batch["obs1"], batch["goal"]], axis=1), dtype=torch.float32
+            )
+            next_obs = torch.tensor(
+                np.concatenate([batch["obs2"], batch["goal"]], axis=1), dtype=torch.float32
+            )
+        else:
+            obs = torch.tensor(batch["obs1"], dtype=torch.float32)
+            next_obs = torch.tensor(batch["obs2"], dtype=torch.float32)
 
+        act = torch.tensor(batch["action"], dtype=torch.float32)
+        rew = torch.tensor(batch["reward"], dtype=torch.float32).unsqueeze(1)
+        done = torch.tensor(batch["done"], dtype=torch.float32).unsqueeze(1)
 
-        # TODO: implement below stuff, guess its done?
-        # Compute target Q-value
+        # ---- Critic update ----
+        # Compute target Q-value for next_obs and next_action
         with torch.no_grad():
             target_actions = self.actor_target(next_obs)
             target_q = self.critic_target(next_obs, target_actions)
-            target = rew + self.gamma * (1 - done) * target_q # done signal to terminate
+            # Bellman backup for Q-function
+            target = rew + self.gamma * (1 - done) * target_q
 
         # Critic (Q-function) gradient step
         current_q = self.critic(obs, act)
@@ -104,21 +120,20 @@ class DDPGAgent(BaseAgent):
         critic_loss.backward()
         self.critic_optimizer.step()
 
-        # Actor (policy) gradient ascent step
-        # ascent because of the Deterministic Policy Gradient (DPG) Theorem
-        # we want to increase expected return, so ascent
+        # ---- Actor update ----
+        # Compute actor loss (maximize expected Q)
         actions_pred = self.actor(obs)
-        actor_loss = -self.critic(obs, actions_pred).mean() # -, because ascent is just negative descent (for e.g. Adam, dont know any ascent optimizers)
+        actor_loss = -self.critic(obs, actions_pred).mean()
 
         self.actor_optimizer.zero_grad()
         actor_loss.backward()
         self.actor_optimizer.step()
 
-        # Soft update target networks
+        # ---- Update target networks ----
         self.update_target(self.actor, self.actor_target)
         self.update_target(self.critic, self.critic_target)
 
-        return actor_loss, critic_loss
+        return {"actor_loss": actor_loss.item(), "critic_loss": critic_loss.item()}
     
     def save(self, path):
         torch.save(self.actor.state_dict(), f"{path}/actor.pth")

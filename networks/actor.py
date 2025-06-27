@@ -22,8 +22,8 @@ class Actor(nn.Module):
         # Input size depends on whether we're including the goal vector (HER)
         input_size = env_params['obs_dim'] + env_params['goal_dim'] if her else env_params['obs_dim']
 
-        # Store the action limit (used to scale output to correct range)
-        self.act_limit = env_params['act_limit']  # e.g. 1.0 or env.action_space.high
+        # Convert act_limit to torch tensor ONCE, for model computations
+        self.act_limit = torch.tensor(env_params['act_limit'], dtype=torch.float32)
 
         # Create a list of fully connected layers based on the specified architecture
         layer_dims = [input_size] + hidden_layers

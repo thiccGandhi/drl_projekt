@@ -20,6 +20,8 @@ class Trainer:
         self.episode_reward = 0
         self.episode_length = 0
         self.success_rate = 0
+        self.training_history = []   # List of dicts, one per episode
+        self.eval_history = []       # List of (step, eval dict)
 
 
     def train(self):
@@ -70,6 +72,7 @@ class Trainer:
             if self.total_episodes % self.config["eval_freq"] == 0:
                 success_rate = self.evaluate() # or reward
                 self.logger.log_eval({"eval/success_rate": success_rate}, step=self.total_episodes) # idk
+                self.eval_history.append((self.total_episodes, success_rate))
 
             # train loss, success rate
             if episode_metrics:
@@ -77,7 +80,8 @@ class Trainer:
                     key: np.mean([m[key] for m in episode_metrics]) for key in episode_metrics[0].keys()
                 }
                 avg_metrics["train/success_rate_100"] = np.mean(last_100_successes)
-                self.logger.log_episode(avg_metrics)
+                self.logger.log_episode(avg_metrics, step=self.total_episodes)
+                self.training_history.append({"step": self.total_episodes, **avg_metrics})
 
             # increase episode counter
             self.total_episodes += 1
@@ -89,15 +93,18 @@ class Trainer:
         total_reward = 0
 
         for _ in range(num_episodes):
-            obs = self.eval_env.reset()
+            #obs = self.eval_env.reset()
+            obs, _ = self.eval_env.reset()
             done = False
             info = None
             episode_reward = 0
 
             while not done:
                 act = self.agent.select_action(obs, noise=0.0)
-                obs, rew, done, info = self.eval_env.step(act)
-                episode_reward += rew
+                #obs, rew, done, info = self.eval_env.step(act)
+                obs, reward, terminated, truncated, info = self.eval_env.step(act)
+                done = terminated or truncated
+                episode_reward += reward
 
             total_reward += episode_reward
 
