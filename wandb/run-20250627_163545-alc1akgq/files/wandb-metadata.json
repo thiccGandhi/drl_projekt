@@ -1,0 +1,29 @@
+{
+  "os": "Linux-6.8.0-1028-azure-x86_64-with-glibc2.39",
+  "python": "CPython 3.12.3",
+  "startedAt": "2025-06-27T16:35:49.250740Z",
+  "args": [
+    "-f",
+    "/databricks/kernel-connections/e40a5b73f406ffd28f0ea1c3123a10f9ee4da1b34b2b3995296d99a46798e55d.json"
+  ],
+  "program": "<python with no main file>",
+  "email": "anakasra71@gmail.com",
+  "root": "/Workspace/Users/rana.kasrawi@de.bosch.com/drl_projekt",
+  "host": "0508-074754-w0ky0nqp-10-201-194-120",
+  "executable": "/local_disk0/.ephemeral_nfs/envs/pythonEnv-8eff420f-fbe4-42e1-ab87-11a1dae0347a/bin/python",
+  "cpu_count": 4,
+  "cpu_count_logical": 8,
+  "disk": {
+    "/": {
+      "total": "269427478528",
+      "used": "16110444544"
+    }
+  },
+  "memory": {
+    "total": "61624811520"
+  },
+  "cpu": {
+    "count": 4,
+    "countLogical": 8
+  }
+}
