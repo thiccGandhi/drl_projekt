@@ -8,8 +8,9 @@ A class that contains logic for applying HER on experience data. It has two main
      this is a more advanced flexible version of HER
 """
 
+
 class HERBuffer:
-    def __init__(self, reward_fn):
+    def __init__(self, reward_fn, obs_dim, act_dim, goal_dim, size, replay_k=4, strategy='future'):
         """
         Initialize the HER (Hindsight Experience Replay) object.
         ( Hindsight Experience Replay (HER) — a technique to help agents learn from failures by pretending they succeeded at a different goal)
@@ -25,8 +26,97 @@ class HERBuffer:
 
         # Save the reward function to recompute rewards after changing the goal
         # reward_fn should be like env.compute_reward(ag, g, info)
-        self.reward_fn = reward_fn 
+        self.idx = 0
+        self.size = 0
+        self.max_size = size
 
+        self.obs1_buffer = np.zeros([size, obs_dim], dtype=np.float32)
+        self.obs2_buffer = np.zeros([size, obs_dim], dtype=np.float32)
+        self.action_buffer = np.zeros([size, act_dim], dtype=np.float32)
+        self.reward_buffer = np.zeros(size, dtype=np.float32)
+        self.goal_buffer = np.zeros([size, goal_dim], dtype=np.float32)
+        self.done_buffer = np.zeros(size, dtype=np.float32)
+
+        self.reward_fn = reward_fn
+        self.replay_k = replay_k
+        self.future_p = 1 - (1. / (1 + replay_k))  # e.g. 0.8 if replay_k = 4
+        self.strategy = strategy
+
+        # Internal episode buffer
+        self.episode_transitions = []
+
+    def store(self, obs, next_obs, action, reward, done):
+        """
+        Stores a step and triggers HER augmentation when done=True.
+        """
+        # print(obs)
+        goal = obs['desired_goal']
+        ag = obs['achieved_goal']
+        ag_next = next_obs['achieved_goal']
+
+        # Append to internal episode buffer
+        self.episode_transitions.append((obs, next_obs, action, reward, goal, done, ag, ag_next))
+
+        if done:
+            self._store_episode()
+            self.episode_transitions = []  # Reset for next episode
+
+
+    def _store_episode(self):
+        """
+        Takes the episode from the internal buffer and saves the original? and with HER relabeled transitions.
+        """
+        episode = self.episode_transitions
+        T = len(episode)
+
+        obs, next_obs, acts, rewards, goals, dones, ags, ag_nexts = zip(*episode)
+
+        for t in range(T):
+            # Store original transition
+            self._store_single(obs[t]["observation"], next_obs[t]["observation"], acts[t], rewards[t], goals[t], dones[t])
+
+        # HER relabeling
+        for t in range(T):
+            for _ in range(self.replay_k):
+                if self.strategy == 'future':
+                    if t + 1 >= T:
+                        continue
+                    future_t = np.random.randint(t + 1, T)
+                    new_goal = ags[future_t]
+                elif self.strategy == 'final':
+                    new_goal = ags[-1]
+                elif self.strategy == 'episode':
+                    new_goal = ags[np.random.randint(0, T)]
+                else:
+                    raise ValueError("Invalid HER strategy")
+
+                # Recompute reward with new goal
+                new_reward = self.reward_fn(ag_nexts[t], new_goal, None)
+
+                self._store_single(obs[t]["observation"], next_obs[t]["observation"], acts[t], new_reward, new_goal, dones[t])
+
+    def _store_single(self, obs, next_obs, action, reward, goal, done):
+        self.obs1_buffer[self.idx] = obs
+        self.obs2_buffer[self.idx] = next_obs
+        self.action_buffer[self.idx] = action
+        self.reward_buffer[self.idx] = reward
+        self.goal_buffer[self.idx] = goal
+        self.done_buffer[self.idx] = done
+
+        self.idx = (self.idx + 1) % self.max_size
+        self.size = min(self.size + 1, self.max_size)
+
+
+    def sample(self, batch_size):
+        idxs = np.random.randint(0, self.size, batch_size)
+        return dict(
+            obs1=self.obs1_buffer[idxs],
+            obs2=self.obs2_buffer[idxs],
+            action=self.action_buffer[idxs],
+            reward=self.reward_buffer[idxs],
+            goal=self.goal_buffer[idxs],
+            done=self.done_buffer[idxs],
+        )
 
     def sample_goals_her(self, buffer_temp, num_transitions):
         """
@@ -46,7 +136,7 @@ class HERBuffer:
         batch_size = num_transitions
 
         # Sample random time indices from the episode [0, T-1)
-        t_samples = np.random.randint(T-1, size=batch_size)
+        t_samples = np.random.randint(T - 1, size=batch_size)
 
         # Create a new dictionary of sampled transitions by selecting timesteps
         transitions = {key: buffer_temp[key][t_samples].copy() for key in buffer_temp.keys()}
@@ -81,8 +171,7 @@ class HERBuffer:
         }
 
         return transitions
-    
-    
+
     # It takes a dictionary buffer_temp, representing a full episode of transitions, and creates a new version where all goals are replaced with the last achieved goal.
     def _apply_hindsight(self, buffer_temp):
         """
@@ -108,13 +197,11 @@ class HERBuffer:
         # Clear the reward list (we will manually fill it)
         hind_experiences['r'] = []
 
-
-
         # Loop through each timestep in the episode
         for i in range(num_transitions):
             # Replace the original goal at every step with the final achieved goal
             hind_experiences['g'][i] = new_desired_goal
-            
+
             # # toDo: It doesn't call reward_fn() here, maybe i should call it here? 
             # # Recompute reward — currently hardcoded:
             # if i == num_transitions - 1:
@@ -134,10 +221,7 @@ class HERBuffer:
             hind_experiences['r'].append(reward)  # Add computed reward to the list
 
         # Add the next-step goals (shifted one step forward)
-        hind_experiences['g_next'] = hind_experiences['g'][1:, :] # like shift the goal array for next steps
+        hind_experiences['g_next'] = hind_experiences['g'][1:, :]  # like shift the goal array for next steps
 
         # Return the updated episode with relabeled goals and updated rewards
         return hind_experiences
-
-
-

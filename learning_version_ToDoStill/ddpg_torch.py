@@ -216,6 +216,7 @@ class Agent(object):
         self._reward_env = getattr(env, 'unwrapped', env)
         #++#
         self.update_network_parameters(tau=1)
+        print("agent init")
 
     # you have to put the actor into evaluation mode, it doesn't perform an evaulation step
     # but just tells pytorch that you don't wanna calculate statistics for the batch norm layers

@@ -12,5 +12,7 @@
   "buffer_size": 1000000,
   "seed": 42,
   "device": "cuda",
-  "gamma": 0.99
+  "gamma": 0.99,
+  "project_name": "rl_project",
+  "run_name": "test"
 }

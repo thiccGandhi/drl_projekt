@@ -1,0 +1,83 @@
+{
+  "os": "Linux-5.14.0-427.50.1.el9_4.x86_64-x86_64-with-glibc2.34",
+  "python": "CPython 3.11.11",
+  "startedAt": "2025-06-27T05:37:05.646043Z",
+  "program": "/home/ul/ul_student/ul_uqr59/drl_project/main.py",
+  "git": {
+    "remote": "git@github.com:thiccGandhi/drl_projekt.git",
+    "commit": "5f6887a881204bd4bfb7ac700f4c4c10b849e44a"
+  },
+  "email": "tim.pfeifer@uni-ulm.de",
+  "root": "/pfs/data6/home/ul/ul_student/ul_uqr59/drl_project",
+  "host": "uc3n003.localdomain",
+  "executable": "/home/ul/ul_student/ul_uqr59/miniconda3/envs/rl_env/bin/python",
+  "cpu_count": 96,
+  "cpu_count_logical": 192,
+  "disk": {
+    "/": {
+      "total": "99950723072",
+      "used": "46376300544"
+    }
+  },
+  "memory": {
+    "total": "405456224256"
+  },
+  "cpu": {
+    "count": 96,
+    "countLogical": 192
+  },
+  "slurm": {
+    "cluster_name": "uc3",
+    "conf": "/etc/slurm/slurm.conf",
+    "cpus_on_node": "2",
+    "gtids": "0",
+    "job_account": "ul",
+    "job_cpus_per_node": "2",
+    "job_end_time": "1751012547",
+    "job_gid": "500026",
+    "job_id": "606018",
+    "job_name": "interactive",
+    "job_nodelist": "uc3n003",
+    "job_num_nodes": "1",
+    "job_partition": "cpu",
+    "job_qos": "normal",
+    "job_start_time": "1751001747",
+    "job_uid": "953804",
+    "job_user": "ul_uqr59",
+    "jobid": "606018",
+    "launch_node_ipaddr": "172.21.227.240",
+    "localid": "0",
+    "mem_per_node": "20480",
+    "mpi_type": "pmi2",
+    "nnodes": "1",
+    "nodeid": "0",
+    "nodelist": "uc3n003",
+    "nprocs": "1",
+    "ntasks": "1",
+    "oom_kill_step": "0",
+    "pmi2_proc_mapping": "(vector,(0,1,1))",
+    "pmi2_srun_port": "32951",
+    "pmi2_step_nodes": "uc3n003",
+    "prio_process": "0",
+    "procid": "0",
+    "pty_port": "40985",
+    "pty_win_col": "126",
+    "pty_win_row": "34",
+    "script_context": "prolog_task",
+    "srun_comm_host": "172.21.227.240",
+    "srun_comm_port": "44885",
+    "step_id": "4294967290",
+    "step_launcher_port": "44885",
+    "step_nodelist": "uc3n003",
+    "step_num_nodes": "1",
+    "step_num_tasks": "1",
+    "step_tasks_per_node": "1",
+    "stepid": "4294967290",
+    "submit_dir": "/pfs/data6/home/ul/ul_student/ul_uqr59/drl_project",
+    "submit_host": "uc3n991.localdomain",
+    "task_pid": "2847793",
+    "tasks_per_node": "1",
+    "topology_addr": "VirtualInterconnnect..uc3ibbi1r2.uc3n003",
+    "topology_addr_pattern": "switch.switch.switch.node"
+  }
+}
