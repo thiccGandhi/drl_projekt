@@ -1,0 +1,1 @@
+{"_timestamp":1.7510371530122795e+09,"_wandb":{"runtime":173},"actor_loss":0.48496366322040557,"critic_loss":0.17137651849538088,"train/success_rate_100":0,"_runtime":173.26014902,"_step":5,"eval/success_rate":0}

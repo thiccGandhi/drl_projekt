@@ -1,0 +1,1 @@
+{"train/success_rate_100":0,"_runtime":279.380032456,"_wandb":{"runtime":279},"_step":599,"eval/success_rate":0.2,"_timestamp":1.751037752086194e+09,"actor_loss":4.009080909490585,"critic_loss":0.6353777217678725}
