@@ -10,6 +10,7 @@ class Logger:
 
         # Initialize wandb
         wandb.init(project=config["project_name"], name=config["run_name"], config=config)
+        self.run = wandb.run
 
     def log_episode(self, metrics, step):
         """
