@@ -22,6 +22,7 @@ class Trainer:
         self.success_rate = 0
         self.training_history = []   # List of dicts, one per episode
         self.eval_history = []       # List of (step, eval dict)
+        self.last_100_successes = deque(maxlen=100)
 
 
     def train(self):
@@ -31,24 +32,24 @@ class Trainer:
 
         while self.total_steps < self.config["max_steps"]:
             obs, _ = self.env.reset() # for whatever reason this returns a tuple
-            print(obs)
+            # print(obs)
             done = False
             episode_metrics = []
-            last_100_successes = deque(maxlen=100)
-            info = {}
+            final_info = {}
 
             while not done:
                 # Action selection
                 if self.total_steps < self.config["min_steps"]:
-                    act = self.env.action_space.sample() # random action because not enough in buffer
+                    act = np.array(self.env.action_space.sample(), dtype=np.float32) # random action because not enough in buffer
                 else:
-                    act = self.agent.select_action(obs, noise=self.config["exploration_noise"]) # agent policy with noise for exploration
+                    act = np.array(self.agent.select_action(obs, noise=self.config["exploration_noise"]), dtype=np.float32) # agent policy with noise for exploration
 
                 # Environment Step
                 # result = self.env.step(self.env.action_space.sample())
                 # print(f"Step output length: {len(result)}")
                 next_obs, rew, terminated, truncated, info = self.env.step(act)
                 done = terminated or truncated
+                final_info = info
 
                 # Store in buffer
                 self.replay_buffer.store(obs, next_obs, act, rew, done)
@@ -65,8 +66,8 @@ class Trainer:
                     episode_metrics.append(metrics)
 
             # End of episode
-            episode_success = info.get("is_success", 0.0)
-            last_100_successes.append(episode_success)
+            episode_success = final_info.get("is_success", 0.0)
+            self.last_100_successes.append(episode_success)
 
             # Evaluate agent every n episodes
             if self.total_episodes % self.config["eval_freq"] == 0:
@@ -79,8 +80,13 @@ class Trainer:
                 avg_metrics = {
                     key: np.mean([m[key] for m in episode_metrics]) for key in episode_metrics[0].keys()
                 }
-                avg_metrics["train/success_rate_100"] = np.mean(last_100_successes)
-                self.logger.log_episode(avg_metrics, step=self.total_episodes)
+                avg_metrics["train/success_rate_100"] = np.mean(self.last_100_successes)
+                # self.logger.log_episode(avg_metrics, step=self.total_episodes)
+                self.logger.log_episode({
+                    **avg_metrics,
+                    "train/success_rate_100": np.mean(self.last_100_successes),
+                    "train/success_raw": episode_success  # (optional to debug individual episodes)
+                }, step=self.total_episodes)
                 self.training_history.append({"step": self.total_episodes, **avg_metrics})
 
             # increase episode counter

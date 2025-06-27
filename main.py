@@ -3,6 +3,7 @@ import gymnasium as gym
 import gymnasium_robotics
 import torch
 from copy import deepcopy
+import numpy as np
 
 from networks.actor import Actor
 from networks.critic import Critic
@@ -11,6 +12,7 @@ from replay_buffer.her_buffer import HERBuffer
 from agents.ddpg import DDPGAgent
 from utils.logging import Logger
 from trainer.trainer import Trainer
+from utils.plotting import ResultsPlotter
 
 gym.register_envs(gymnasium_robotics)
 env = gym.make("FetchPush-v4")
@@ -18,7 +20,7 @@ env = gym.make("FetchPush-v4")
 obs_dim = env.observation_space["observation"].shape[0]
 goal_dim = env.observation_space["desired_goal"].shape[0]
 act_dim = env.action_space.shape[0]
-act_lim = torch.as_tensor(env.action_space.high, dtype=torch.float32)
+act_lim = np.array(env.action_space.high, dtype=np.float32)
 
 config = json.load(open("configs/test.json"))
 
@@ -45,7 +47,7 @@ replay_buffer = HERBuffer(env.env.env.env.compute_reward, obs_dim, act_dim, goal
 
 agent = DDPGAgent(actor, critic, actor_target, critic_target, replay_buffer, config, actor_optimizer, critic_optimizer, act_lim)
 
-logger = Logger(log_dir="~/drl_project/logs/", config=config)
+logger = Logger(log_dir="~/drl_project/logs_test_2delete/", config=config)
 
 trainer = Trainer(agent, env, config, logger)
 
@@ -53,3 +55,5 @@ trainer = Trainer(agent, env, config, logger)
 #trainer.test_ddpg_training_step(agent, env, actor, critic, replay_buffer)
 
 trainer.train()
+plotter = ResultsPlotter(trainer)
+plotter.plot_all(show=True)
