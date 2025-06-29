@@ -72,34 +72,40 @@ class Trainer:
             episode_success = final_info.get("is_success", 0.0)
             self.last_100_successes.append(episode_success)
 
+
             # Evaluate agent every n episodes
             if self.total_episodes % self.config["eval_freq"] == 0:
-                success_rate = self.evaluate() # or reward
-                self.logger.log_eval({"eval/success_rate": success_rate}, step=self.total_episodes) # idk
+                success_rate, eval_reward = self.evaluate() # or reward
+                self.logger.log_eval({"eval/success_rate": success_rate, "eval/reward": eval_reward}, step=self.total_episodes) # idk
                 self.eval_history.append((self.total_episodes, success_rate))
 
             # train loss, success rate
             if episode_metrics:
-                avg_metrics = {
-                    key: np.mean([m[key] for m in episode_metrics]) for key in episode_metrics[0].keys()
-                }
+                avg_metrics = {}
+                for key in episode_metrics[0].keys():
+                    values = [m[key] for m in episode_metrics if key in m and m[key] is not None]
+                    if values:
+                        avg_metrics[key] = np.nanmean(values)
                 # avg_metrics["train/success_rate_100"] = np.mean(self.last_100_successes)
                 # self.logger.log_episode(avg_metrics, step=self.total_episodes)
                 self.logger.log_episode({
                     **avg_metrics,
                     "train/success_rate_100": np.mean(self.last_100_successes),
-                    "train/success_raw": episode_success  # (optional to debug individual episodes)
+                    "train/success_raw": episode_success,  # (optional to debug individual episodes)
+                    "train/avg_reward": self.episode_reward,
                 }, step=self.total_episodes)
                 self.training_history.append({"step": self.total_episodes, **avg_metrics})
 
             # increase episode counter
             self.total_episodes += 1
+            self.episode_reward = 0
+            self.episode_length = 0
 
     # this ecaluates only one episode, is that correct? 
     # suggestions:
-    def evaluate(self, num_episodes=5, return_success_rate=True):
+    def evaluate(self, num_episodes=5):
         num_successes = 0
-        total_reward = 0
+        total_reward = []
 
         for _ in range(num_episodes):
             #obs = self.eval_env.reset()
@@ -115,16 +121,12 @@ class Trainer:
                 done = terminated or truncated
                 episode_reward += reward
 
-            total_reward += episode_reward
+            total_reward.append(episode_reward)
 
-            if return_success_rate:
-                if info.get("is_success", 0.0) == 1.0:
-                    num_successes += 1
+            if info.get("is_success", 0.0) == 1.0:
+                num_successes += 1
 
-        if return_success_rate:
-            return num_successes / num_episodes
-        else:
-            return total_reward / num_episodes
+        return num_successes / num_episodes, np.mean(total_reward)
 
 
     #def evaluate(self):

@@ -1,5 +1,8 @@
 playground/
 .idea/
+wandb/
+wandb/latest-run
+test_results/
 
 
 # Byte-compiled / optimized / DLL files

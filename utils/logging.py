@@ -28,7 +28,7 @@ class Logger:
         run_name = f"{prefix}_v{version_number}_{timestamp}"
 
         # Initialize wandb
-        wandb.init(project=config["project_name"], name=run_name, config=config, dir=self.log_dir)
+        wandb.init(project=config["project_name"], name=run_name, config=config, dir=self.log_dir + run_name)
         self.run = wandb.run
 
 

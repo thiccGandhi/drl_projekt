@@ -16,5 +16,7 @@
   "device": "cuda",
   "gamma": 0.99,
   "project_name": "rl_project",
-  "run_name": "test"
+  "run_name": "test",
+  "env_name": "FetchPush-v4",
+  "agent": "td3"
 }
