@@ -47,7 +47,7 @@ replay_buffer = HERBuffer(env.env.env.env.compute_reward, obs_dim, act_dim, goal
 
 agent = DDPGAgent(actor, critic, actor_target, critic_target, replay_buffer, config, actor_optimizer, critic_optimizer, act_lim)
 
-logger = Logger(log_dir="~/drl_project/logs_test_2delete/", config=config)
+logger = Logger(log_dir="~/drl_project/wandb/", config=config)
 
 trainer = Trainer(agent, env, config, logger)
 
