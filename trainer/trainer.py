@@ -61,7 +61,10 @@ class Trainer:
                 self.episode_length += 1
 
                 # Training step
-                metrics = self.agent.update()
+                if self.total_steps < self.config["update_after"]:
+                    metrics = {"actor_loss": 0, "critic_loss": 0}
+                else:
+                    metrics = self.agent.update()
                 if metrics:  # sometimes it might return None early in training
                     episode_metrics.append(metrics)
 
@@ -80,7 +83,7 @@ class Trainer:
                 avg_metrics = {
                     key: np.mean([m[key] for m in episode_metrics]) for key in episode_metrics[0].keys()
                 }
-                avg_metrics["train/success_rate_100"] = np.mean(self.last_100_successes)
+                # avg_metrics["train/success_rate_100"] = np.mean(self.last_100_successes)
                 # self.logger.log_episode(avg_metrics, step=self.total_episodes)
                 self.logger.log_episode({
                     **avg_metrics,
