@@ -10,3 +10,10 @@ https://spinningup.openai.com/en/latest/algorithms/ddpg.html
 oder hier noch das original DDPG paper
 
 https://arxiv.org/abs/1509.02971
+
+---
+
+`main.py` wird alles initialisiert was benötigt wird (Actor, Critic, ReplayBuffer, etc.)\
+Es wird alles in einem `Agent`-Objekt zusammengeführt (DDPG oder TD3 bis jetzt, files in `agents\`)\
+Dann wird der `Trainer` (`trainer\trainer.py`) aufgerufen, welcher in `train()` über die Episoden iteriert.\
+In jeder Episode wird dann `agent.update()` aufgerufen (Update von Actor, Critic und Targets)\
