@@ -32,6 +32,9 @@ class Trainer:
 
         while self.total_steps < self.config["max_steps"]:
             obs, _ = self.env.reset() # for whatever reason this returns a tuple
+            #ag = obs["achieved_goal"]
+            #g = obs["desired_goal"]
+            #print(f"Episode {self.total_episodes} reset: AG = {ag}, G = {g}, dist = {np.linalg.norm(ag - g):.4f}")
             # print(obs)
             done = False
             episode_metrics = []
@@ -50,6 +53,8 @@ class Trainer:
                 next_obs, rew, terminated, truncated, info = self.env.step(act)
                 done = terminated or truncated
                 final_info = info
+                #if self.episode_length == 0:
+                #    print(f"Step 1 reward: {rew}, is_success: {info.get('is_success')}")
 
                 # Store in buffer
                 self.replay_buffer.store(obs, next_obs, act, rew, done)

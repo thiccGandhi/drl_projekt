@@ -62,7 +62,7 @@ elif config["agent"] == "td3":
 else:
     raise ValueError(f"Unsupported agent type: {config['agent']}")
 
-logger = Logger(log_dir="~/drl_project/wandb/", config=config)
+logger = Logger(log_dir="wandb/", config=config)
 
 trainer = Trainer(agent, env, config, logger)
 
