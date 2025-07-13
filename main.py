@@ -19,6 +19,22 @@ config = json.load(open("configs/test.json"))
 
 gym.register_envs(gymnasium_robotics)
 env = gym.make(config["env_name"])
+env.reset()
+
+geom_type_map = {
+    0: "plane",
+    1: "hfield",
+    2: "sphere",
+    3: "capsule",
+    4: "ellipsoid",
+    5: "cylinder",
+    6: "box",
+    7: "mesh",
+    8: "sdf"
+}
+object_type = geom_type_map[env.unwrapped.model.geom_type[23]]
+config["object_type"] = object_type
+
 
 obs_dim = env.observation_space["observation"].shape[0]
 goal_dim = env.observation_space["desired_goal"].shape[0]

@@ -12,12 +12,13 @@
   "lr_critic": 0.0003,
   "discount": 0.99,
   "tau": 0.005,
-  "buffer_size": 3000000,
+  "buffer_size": 1000000,
   "seed": 42,
   "device": "cuda",
   "gamma": 0.99,
   "project_name": "rl_project",
   "run_name": "test",
   "env_name": "FetchPush-v4",
-  "agent": "ddpg"
+  "agent": "td3",
+  "object_type": ""
 }
