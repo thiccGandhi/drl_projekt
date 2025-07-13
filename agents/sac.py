@@ -13,9 +13,9 @@ class SACAgent:
 
     def __init__(
         self,
-        actor,             # Policy network
-        critic1,           # First Q network
-        critic2,           # Second Q network
+        actor,             # Policy network π_ϕ
+        critic1,           # First Q network Q_θ1
+        critic2,           # Second Q network Q_θ2
         target_critic1,    # Target Q1 network
         target_critic2,    # Target Q2 network
         replay_buffer,     # Experience replay buffer
@@ -81,6 +81,11 @@ class SACAgent:
         if self.replay_buffer.size < self.batch_size:
             return
 
+        # 1. BATCH SAMPLING = Monte Carlo Estimate of E
+        # E: Expectation = empirical average over the batch 𝐸𝑠𝑡,𝑎𝑡,𝑟𝑡,𝑠𝑡+1∼𝐷
+        # Sample batch from replay buffer D for each gradient step 
+        # D ← D ∪ {(st, at, r(st, at), st+1)}
+        # samples a minibatch (s_t, a_t, r_t, s_t+1, d_t)
         batch = self.replay_buffer.sample(self.batch_size)
         obs = torch.tensor(batch['obs1'], dtype=torch.float32, device=self.device)
         next_obs = torch.tensor(batch['obs2'], dtype=torch.float32, device=self.device)
@@ -88,25 +93,30 @@ class SACAgent:
         rew = torch.tensor(batch['reward'], dtype=torch.float32, device=self.device).unsqueeze(1)
         done = torch.tensor(batch['done'], dtype=torch.float32, device=self.device).unsqueeze(1)
 
-        # ----------- Critic Update -----------
-        # Compute target Q value
+        # ----------- Critic Update ----------
+        # Value Function Update: Critic (Q-function) Update
+        # Compute target Q value : 
+        # formula Qˆ(s_t, a_t) = r(s_t, a_t) + γ E_st+1∼p [V_ψ¯(s_t+1) ]
         with torch.no_grad():
             # Sample next action and log probability from current policy
             next_action, next_log_prob = self.actor(next_obs)
             # Compute target Q by taking min of two target critics
             target_q1 = self.target_critic1(next_obs, next_action)
             target_q2 = self.target_critic2(next_obs, next_action)
+            # in the double Q variant, we use min_i=1,2 Q_θ(s_t+1, a_t+1) instead of the net value
             min_target_q = torch.min(target_q1, target_q2)
             # Soft Q backup: reward + discount * (target_q - alpha * entropy)
             target_q = rew + self.gamma * (1 - done) * (min_target_q - self.alpha * next_log_prob)
 
-        # Current Q estimates
+        # Q-function Loss : Current Q estimates
+        # critic1_loss and critic2_loss are 𝐽_𝑄(𝜃) for each critic (with empirical mean via batch).
         current_q1 = self.critic1(obs, act)
         current_q2 = self.critic2(obs, act)
         critic1_loss = self.critic_loss(current_q1, target_q)
         critic2_loss = self.critic_loss(current_q2, target_q)
 
-        # Optimize critics
+        # Q-function Gradient Step: Optimize critics GRADIENT STEP (∇J)
+        # 𝜃𝑖 <- 𝜃𝑖 - 𝜆_𝑄 .∇_𝜃𝑖 . 𝐽_𝑄(𝜃𝑖)
         self.critic1_optimizer.zero_grad()
         critic1_loss.backward()
         self.critic1_optimizer.step()
@@ -115,21 +125,27 @@ class SACAgent:
         critic2_loss.backward()
         self.critic2_optimizer.step()
 
-        # ----------- Actor Update -----------
+        # ----------- Policy (Actor) Update -----------
         # Sample action and log probability for current state batch
-        new_action, log_prob = self.actor(obs)
+        new_action, log_prob = self.actor(obs) # a_t ~ π_φ(·|s_t)
         # Q-value for new actions (use current critics)
         q1_new = self.critic1(obs, new_action)
         q2_new = self.critic2(obs, new_action)
         min_q_new = torch.min(q1_new, q2_new)
         # Actor loss: maximize expected Q + entropy (i.e., minimize -(Q - alpha * log_pi))
-        actor_loss = (self.alpha * log_prob - min_q_new).mean()
-
+        # reparameterized stochastic policy gradient
+        # self.alpha * log_prob corresponds to entropy regularization (+αH) 
+        # and -min_q_new is maximizing Q-value (but minimizing the negative, so a minimization loss)
+        #(α.log (π_ϕ​(at​∣st​))−min_i (​Q_θi​​(st​,at​)) )
+        actor_loss = (self.alpha * log_prob - min_q_new).mean() 
+        
         self.actor_optimizer.zero_grad()
         actor_loss.backward()
         self.actor_optimizer.step()
 
         # ----------- Entropy (Alpha) Update -----------
+        # Entropy (Alpha) Update (SAC v2, not in original Eq. 5–13 but in follow-up)
+        # In the 2019 follow-up, Haarnoja et al. add automatic entropy tuning.
         if self.automatic_entropy_tuning:
             alpha_loss = -(self.log_alpha * (log_prob + self.target_entropy).detach()).mean()
             self.alpha_optimizer.zero_grad()
@@ -137,7 +153,7 @@ class SACAgent:
             self.alpha_optimizer.step()
             self.alpha = self.log_alpha.exp().item()  # Update alpha
 
-        # ----------- Target Networks Update (Polyak averaging) -----------
+        # ----------- Target Networks Q Update (Polyak averaging) -----------
         self._soft_update(self.critic1, self.target_critic1)
         self._soft_update(self.critic2, self.target_critic2)
 
