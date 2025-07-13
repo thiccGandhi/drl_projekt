@@ -44,6 +44,7 @@ class Actor(nn.Module):
         
         # Final output layer that maps to the action space
         self.action_out = nn.Linear(hidden_layers[-1], env_params['action_dim'])
+        self.action_dim = env_params['action_dim']
 
         if stochastic_policy:
             self.log_std_out = nn.Linear(hidden_layers[-1], env_params['action_dim'])
