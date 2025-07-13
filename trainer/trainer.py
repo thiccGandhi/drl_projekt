@@ -39,8 +39,9 @@ class Trainer:
             done = False
             episode_metrics = []
             final_info = {}
+            time_in_goal = []
 
-            while not done:
+            while self.episode_length < self.config["episode_length"]:
                 # Action selection
                 if self.total_steps < self.config["min_steps"]:
                     act = np.array(self.env.action_space.sample(), dtype=np.float32) # random action because not enough in buffer
@@ -64,6 +65,9 @@ class Trainer:
                 self.total_steps += 1
                 self.episode_reward += rew
                 self.episode_length += 1
+                
+                timestep_success = info.get("is_success", 0.0)
+                time_in_goal.append(timestep_success)
 
                 # Training step
                 if self.total_steps < self.config["update_after"]:
@@ -74,8 +78,8 @@ class Trainer:
                     episode_metrics.append(metrics)
 
             # End of episode
-            episode_success = final_info.get("is_success", 0.0)
-            self.last_100_successes.append(episode_success)
+            episode_end_success = final_info.get("is_success", 0.0)
+            self.last_100_successes.append(episode_end_success)
 
 
             # Evaluate agent every n episodes
@@ -96,8 +100,9 @@ class Trainer:
                 self.logger.log_episode({
                     **avg_metrics,
                     "train/success_rate_100": np.mean(self.last_100_successes),
-                    "train/success_raw": episode_success,  # (optional to debug individual episodes)
+                    "train/success_raw": episode_end_success,  # (optional to debug individual episodes)
                     "train/avg_reward": self.episode_reward,
+                    "train/time_in_goal": np.sum(time_in_goal)
                 }, step=self.total_episodes)
                 self.training_history.append({"step": self.total_episodes, **avg_metrics})
 

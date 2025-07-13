@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 class Critic(nn.Module):
-    def __init__(self, env_params, her, hidden_layers):
+    def __init__(self, env_params, her, hidden_layers, seed = None):
         """
         Critic network: learns the Q-function Q(s, a)
         ----------------------------------------------------
@@ -17,6 +17,8 @@ class Critic(nn.Module):
         - hidden_layers: list of ints, defining the MLP architecture
         """
         super().__init__()
+        if seed is not None:
+            torch.manual_seed(seed)
 
         # Convert act_limit to torch tensor ONCE, for model computations
         self.act_limit = torch.tensor(env_params['act_limit'], dtype=torch.float32)

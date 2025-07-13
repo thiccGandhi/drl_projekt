@@ -4,7 +4,7 @@ import torch.nn.functional as F
 
 
 class Actor(nn.Module):
-    def __init__(self, env_params, her, hidden_layers):
+    def __init__(self, env_params, her, hidden_layers, seed = None):
         """
         Actor network: learns the policy π(s) → a (action)
         ----------------------------------------------------
@@ -18,6 +18,8 @@ class Actor(nn.Module):
         - hidden_layers: list of ints, e.g. [256, 256], defining the architecture
         """
         super(Actor, self).__init__()
+        if seed is not None:
+            torch.manual_seed(seed)
 
         # Input size depends on whether we're including the goal vector (HER)
         input_size = env_params['obs_dim'] + env_params['goal_dim'] if her else env_params['obs_dim']

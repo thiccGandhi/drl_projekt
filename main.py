@@ -36,9 +36,9 @@ env_params = {
 her = config.get("her", True)
 hidden_layers = config.get("hidden_layers", [256, 256])
 
-actor = Actor(env_params, her, hidden_layers)
-critic = Critic(env_params, her, hidden_layers)
-critic2 = Critic(env_params, her, hidden_layers)
+actor = Actor(env_params, her, hidden_layers, seed=42)
+critic = Critic(env_params, her, hidden_layers, seed=420)
+critic2 = Critic(env_params, her, hidden_layers, seed=4200)
 actor_target = deepcopy(actor)
 critic_target = deepcopy(critic)
 critic2_target = deepcopy(critic2)

@@ -2,6 +2,7 @@
 {
   "max_steps": 3000000,
   "min_steps": 10000,
+  "episode_length": 50,
   "update_after": 1000,
   "eval_freq": 10,
   "exploration_noise": 0.1,
@@ -18,5 +19,5 @@
   "project_name": "rl_project",
   "run_name": "test",
   "env_name": "FetchPush-v4",
-  "agent": "td3"
+  "agent": "ddpg"
 }
