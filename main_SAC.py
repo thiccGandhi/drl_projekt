@@ -4,6 +4,7 @@ import gymnasium_robotics
 import torch
 from copy import deepcopy
 import numpy as np
+import random 
 
 from networks.actor import Actor
 from networks.critic import Critic
@@ -51,8 +52,17 @@ config = {
 # Optionally save config to file if your script expects it:
 # with open("configs/test.json", "w") as f: json.dump(config, f)
 
+SEED = config["seed"]  # 42
+random.seed(SEED)
+np.random.seed(SEED)
+torch.manual_seed(SEED)
+
 gym.register_envs(gymnasium_robotics)
 env = gym.make(config["env_name"])
+
+env.action_space.seed(SEED)
+env.observation_space.seed(SEED)
+obs, info = env.reset(seed=SEED)  # Use seed here
 
 obs_dim = env.observation_space["observation"].shape[0]
 goal_dim = env.observation_space["desired_goal"].shape[0]
@@ -69,9 +79,9 @@ env_params = {
 her = config.get("her", True)
 hidden_layers = config.get("hidden_layers", [256, 256])
 
-actor = Actor(env_params, her, hidden_layers, seed=42, stochastic_policy=True)
-critic = Critic(env_params, her, hidden_layers, seed=420)
-critic2 = Critic(env_params, her, hidden_layers, seed=4200)
+actor = Actor(env_params, her, hidden_layers, stochastic_policy=True)
+critic = Critic(env_params, her, hidden_layers)
+critic2 = Critic(env_params, her, hidden_layers)
 actor_target = deepcopy(actor)
 critic_target = deepcopy(critic)
 critic2_target = deepcopy(critic2)
