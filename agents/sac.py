@@ -49,8 +49,9 @@ class SACAgent:
         self.automatic_entropy_tuning = config.get('automatic_entropy_tuning', False)
         if self.automatic_entropy_tuning:
             self.target_entropy = config.get('target_entropy', -actor.action_dim)
-            self.log_alpha = torch.tensor(np.log(self.alpha), requires_grad=True, device=self.device)
-            self.alpha_optimizer = alpha_optimizer
+            # Proper scientific way: register as a parameter for optimizer
+            self.log_alpha = nn.Parameter(torch.tensor(np.log(self.alpha), device=self.device))
+            self.alpha_optimizer = torch.optim.Adam([self.log_alpha], lr=config.get("lr_alpha", 0.0003))
 
         # Optimizers
         self.actor_optimizer = actor_optimizer
@@ -67,10 +68,11 @@ class SACAgent:
         """
         obs = torch.tensor(obs, dtype=torch.float32, device=self.device).unsqueeze(0)
         with torch.no_grad():
-            if deterministic:
-                action, _ = self.actor(obs, deterministic=True)
+            # Always request both outputs for SAC
+            if hasattr(self.actor, 'stochastic_policy') and self.actor.stochastic_policy:
+                action, _ = self.actor(obs, deterministic=deterministic, with_logprob=True)
             else:
-                action, _ = self.actor(obs)
+                action = self.actor(obs)
         return action.cpu().numpy()[0] * self.action_limit
 
     def update(self):
@@ -88,10 +90,15 @@ class SACAgent:
         # samples a minibatch (s_t, a_t, r_t, s_t+1, d_t)
         batch = self.replay_buffer.sample(self.batch_size)
         obs = torch.tensor(batch['obs1'], dtype=torch.float32, device=self.device)
+        goal = torch.tensor(batch['goal'], dtype=torch.float32, device=self.device)
         next_obs = torch.tensor(batch['obs2'], dtype=torch.float32, device=self.device)
         act = torch.tensor(batch['action'], dtype=torch.float32, device=self.device)
         rew = torch.tensor(batch['reward'], dtype=torch.float32, device=self.device).unsqueeze(1)
         done = torch.tensor(batch['done'], dtype=torch.float32, device=self.device).unsqueeze(1)
+
+        # CONCATENATE obs + goal for ALL inputs to networks (actor, critic, target_critic)
+        obs_and_goal      = torch.cat([obs, goal], dim=1)
+        next_obs_and_goal = torch.cat([next_obs, goal], dim=1)
 
         # ----------- Critic Update ----------
         # Value Function Update: Critic (Q-function) Update
@@ -99,10 +106,11 @@ class SACAgent:
         # formula Qˆ(s_t, a_t) = r(s_t, a_t) + γ E_st+1∼p [V_ψ¯(s_t+1) ]
         with torch.no_grad():
             # Sample next action and log probability from current policy
-            next_action, next_log_prob = self.actor(next_obs)
+            #next_action, next_log_prob = self.actor(next_obs_and_goal)
+            next_action, next_log_prob = self.actor(next_obs_and_goal, with_logprob=True)
             # Compute target Q by taking min of two target critics
-            target_q1 = self.target_critic1(next_obs, next_action)
-            target_q2 = self.target_critic2(next_obs, next_action)
+            target_q1 = self.target_critic1(next_obs_and_goal, next_action)
+            target_q2 = self.target_critic2(next_obs_and_goal, next_action)
             # in the double Q variant, we use min_i=1,2 Q_θ(s_t+1, a_t+1) instead of the net value
             min_target_q = torch.min(target_q1, target_q2)
             # Soft Q backup: reward + discount * (target_q - alpha * entropy)
@@ -110,8 +118,8 @@ class SACAgent:
 
         # Q-function Loss : Current Q estimates
         # critic1_loss and critic2_loss are 𝐽_𝑄(𝜃) for each critic (with empirical mean via batch).
-        current_q1 = self.critic1(obs, act)
-        current_q2 = self.critic2(obs, act)
+        current_q1 = self.critic1(obs_and_goal, act)
+        current_q2 = self.critic2(obs_and_goal, act)
         critic1_loss = self.critic_loss(current_q1, target_q)
         critic2_loss = self.critic_loss(current_q2, target_q)
 
@@ -127,10 +135,11 @@ class SACAgent:
 
         # ----------- Policy (Actor) Update -----------
         # Sample action and log probability for current state batch
-        new_action, log_prob = self.actor(obs) # a_t ~ π_φ(·|s_t)
+        #new_action, log_prob = self.actor(obs_and_goal) # a_t ~ π_φ(·|s_t)
+        new_action, log_prob = self.actor(obs_and_goal, with_logprob=True)
         # Q-value for new actions (use current critics)
-        q1_new = self.critic1(obs, new_action)
-        q2_new = self.critic2(obs, new_action)
+        q1_new = self.critic1(obs_and_goal, new_action)
+        q2_new = self.critic2(obs_and_goal, new_action)
         min_q_new = torch.min(q1_new, q2_new)
         # Actor loss: maximize expected Q + entropy (i.e., minimize -(Q - alpha * log_pi))
         # reparameterized stochastic policy gradient

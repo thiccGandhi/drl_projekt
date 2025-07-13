@@ -4,6 +4,19 @@ from tqdm import tqdm
 import numpy as np
 from collections import deque
 
+def flatten_obs(obs, her=True):
+    """
+    Converts a dict obs from the env to a flat vector for the agent.
+    If HER is True, concatenate observation + desired_goal (the usual setup).
+    """
+    if isinstance(obs, dict):
+        if her:
+            return np.concatenate([obs["observation"], obs["desired_goal"]], axis=-1)
+        else:
+            return obs["observation"]
+    # If not a dict, just return as array
+    return np.asarray(obs)
+
 class Trainer:
     """
     Trainer class
@@ -43,11 +56,12 @@ class Trainer:
             time_in_goal = []
 
             while self.episode_length < self.config["episode_length"]:
+                obs_flat = flatten_obs(obs, her=self.config.get("her", True))
                 # Action selection
                 if self.total_steps < self.config["min_steps"]:
                     act = np.array(self.env.action_space.sample(), dtype=np.float32) # random action because not enough in buffer
                 else:
-                    act = np.array(self.agent.select_action(obs, noise=self.config["exploration_noise"]), dtype=np.float32) # agent policy with noise for exploration
+                    act = np.array(self.agent_select_action(obs_flat, explore=True), dtype=np.float32) # agent policy with noise for exploration
 
                 # Environment Step
                 # result = self.env.step(self.env.action_space.sample())
@@ -122,14 +136,16 @@ class Trainer:
         for _ in range(num_episodes):
             #obs = self.eval_env.reset()
             obs, _ = self.eval_env.reset()
+            obs_flat = flatten_obs(obs, her=self.config.get("her", True))
             done = False
             info = {}
             episode_reward = 0
 
             while not done:
-                act = self.agent.select_action(obs, noise=0.0)
+                act = np.array(self.agent_select_action(obs_flat, explore=False), dtype=np.float32)
                 #obs, rew, done, info = self.eval_env.step(act)
                 obs, reward, terminated, truncated, info = self.eval_env.step(act)
+                obs_flat = flatten_obs(obs, her=self.config.get("her", True))
                 done = terminated or truncated
                 episode_reward += reward
 
@@ -141,20 +157,26 @@ class Trainer:
         return num_successes / num_episodes, np.mean(total_reward)
 
 
-    #def evaluate(self):
-    #    """
-    #    Evaluate the agent in the evaluation environment.
-    #
-    #    :return: The summed reward of the episode.
-    #    """
-    #    obs = self.eval_env.reset()
-    #    done = False
-    #    total_reward = 0
-    #    while not done:
-    #        act = self.agent.select_action(obs, noise=0.0) # no noise for evaluation
-    #        obs, rew, done, _ = self.eval_env.step(act)
-    #        total_reward += rew
-    #    return total_reward
+    def agent_select_action(self, obs, explore=True):
+        """
+        General action selection that handles exploration and evaluation mode
+        for both SAC (deterministic arg) and DDPG/TD3 (noise arg).
+        """
+        # Use type or config to select logic (recommended: set 'agent' in config)
+        algo = self.config.get("agent", "sac").lower()
+        if algo == "sac":
+            # For SAC: Exploration is handled by stochastic policy; set deterministic for evaluation
+            return self.agent.select_action(obs, deterministic=not explore)
+        elif algo in {"ddpg", "td3"}:
+            # For DDPG/TD3: Use noise during exploration, zero during evaluation
+            return self.agent.select_action(obs, noise=self.config["exploration_noise"] if explore else 0.0)
+        else:
+            # fallback: try both
+            try:
+                return self.agent.select_action(obs, deterministic=not explore)
+            except TypeError:
+                return self.agent.select_action(obs, noise=self.config["exploration_noise"] if explore else 0.0)
+
 
     def test_ddpg_training_step(self, agent, env, actor, critic, replay_buffer):
         # Fill buffer

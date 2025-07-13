@@ -83,9 +83,9 @@ class Actor(nn.Module):
 
             if with_logprob:
                 # Tanh correction for log-prob (see SAC paper appendix)
-                logp_pi = pi_distribution.log_prob(pi_action).sum(axis=-1)
-                # Correction: numerically stable
-                logp_pi -= (2*(np.log(2) - pi_action - F.softplus(-2*pi_action))).sum(axis=1)
+                logp_pi = pi_distribution.log_prob(pi_action).sum(axis=-1, keepdim=True)
+                # Correction: numerically stable, match dims!
+                logp_pi -= (2 * (np.log(2) - pi_action - F.softplus(-2 * pi_action))).sum(axis=-1, keepdim=True)
                 return action, logp_pi
             else:
                 return action
