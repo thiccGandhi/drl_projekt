@@ -23,6 +23,7 @@ class Trainer:
         self.training_history = []   # List of dicts, one per episode
         self.eval_history = []       # List of (step, eval dict)
         self.last_100_successes = deque(maxlen=100)
+        self.last_100_time_in_goal = deque(maxlen=100)
 
 
     def train(self):
@@ -80,6 +81,7 @@ class Trainer:
             # End of episode
             episode_end_success = final_info.get("is_success", 0.0)
             self.last_100_successes.append(episode_end_success)
+            self.last_100_time_in_goal.append(np.sum(time_in_goal))
 
 
             # Evaluate agent every n episodes
@@ -102,7 +104,7 @@ class Trainer:
                     "train/success_rate_100": np.mean(self.last_100_successes),
                     "train/success_raw": episode_end_success,  # (optional to debug individual episodes)
                     "train/avg_reward": self.episode_reward,
-                    "train/time_in_goal": np.sum(time_in_goal)
+                    "train/time_in_goal_100": np.mean(self.last_100_time_in_goal)
                 }, step=self.total_episodes)
                 self.training_history.append({"step": self.total_episodes, **avg_metrics})
 

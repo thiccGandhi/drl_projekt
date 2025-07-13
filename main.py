@@ -48,7 +48,8 @@ critic_optimizer = torch.optim.Adam(critic.parameters(), lr=config["lr_critic"])
 critic2_optimizer = torch.optim.Adam(critic2.parameters(), lr=config["lr_critic"])
 
 # replay_buffer = ReplayBuffer(obs_dim, act_dim, goal_dim, size=1_000_000)
-replay_buffer = HERBuffer(env.env.env.env.compute_reward, obs_dim, act_dim, goal_dim, size=1_000_000)
+buffer_sie = config.get("buffer_size", 1_000_000)
+replay_buffer = HERBuffer(env.env.env.env.compute_reward, obs_dim, act_dim, goal_dim, size=buffer_sie)
 
 
 agent = DDPGAgent(actor, critic, actor_target, critic_target, replay_buffer, config, actor_optimizer, critic_optimizer, act_lim)

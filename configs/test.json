@@ -12,7 +12,7 @@
   "lr_critic": 0.0003,
   "discount": 0.99,
   "tau": 0.005,
-  "buffer_size": 1000000,
+  "buffer_size": 3000000,
   "seed": 42,
   "device": "cuda",
   "gamma": 0.99,
