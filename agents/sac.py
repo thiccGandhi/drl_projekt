@@ -170,6 +170,7 @@ class SACAgent:
             "actor_loss": actor_loss.item(),
             "critic1_loss": critic1_loss.item(),
             "critic2_loss": critic2_loss.item(),
+            "critic_loss": 0.5 * (critic1_loss.item() + critic2_loss.item()),
             "alpha": self.alpha,
         }
 
