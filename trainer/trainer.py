@@ -121,7 +121,7 @@ class Trainer:
             #obs = self.eval_env.reset()
             obs, _ = self.eval_env.reset()
             done = False
-            info = None
+            info = {}
             episode_reward = 0
 
             while not done:
