@@ -47,7 +47,8 @@ class Critic(nn.Module):
         """
         # Normalize the action (to match the scale the critic expects)
         # Then concatenate it with the input state
-        x = torch.cat([x, action / self.act_limit], dim=1)
+        #x = torch.cat([x, action / self.act_limit], dim=1)
+        x = torch.cat([x, action], dim=1)
 
         # Pass through hidden layers
         for layer in self.hidden_layers:

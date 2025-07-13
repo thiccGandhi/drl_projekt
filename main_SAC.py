@@ -35,9 +35,9 @@ config = {
   "tau": 0.005,
   "buffer_size": 1_000_000,
   "seed": 42,
-  "device": "cuda",
+  "device": "cpu",
   "gamma": 0.98,
-  "project_name": "rl_project_full",
+  "project_name": "rl_project",
   "run_name": "sac_fetchpush_full",
   "env_name": "FetchPush-v4",
   "agent": "sac",
@@ -80,8 +80,6 @@ actor_optimizer = torch.optim.Adam(actor.parameters(), lr=config["lr_actor"])
 critic_optimizer = torch.optim.Adam(critic.parameters(), lr=config["lr_critic"])
 critic2_optimizer = torch.optim.Adam(critic2.parameters(), lr=config["lr_critic"])
 
-# Optional: For alpha if automatic entropy tuning is used
-# alpha_optimizer = torch.optim.Adam([log_alpha], lr=lr_alpha)
 
 # replay_buffer = ReplayBuffer(obs_dim, act_dim, goal_dim, size=1_000_000)
 buffer_sie = config.get("buffer_size", 1_000_000)
@@ -98,7 +96,8 @@ elif config["agent"] == "td3":
                      replay_buffer, config, actor_optimizer, critic_optimizer, critic2_optimizer, act_lim)
 elif config["agent"] == "sac":
     agent = SACAgent(actor, critic, critic2, critic_target, critic2_target,
-                     replay_buffer, config, actor_optimizer, critic_optimizer, critic2_optimizer, act_lim)
+                     replay_buffer, config, actor_optimizer, critic_optimizer, 
+                     critic2_optimizer, act_lim)
 else:
     raise ValueError(f"Unsupported agent type: {config['agent']}")
 
