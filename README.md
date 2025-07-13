@@ -22,3 +22,32 @@ https://arxiv.org/abs/1802.09477
 Es wird alles in einem `Agent`-Objekt zusammengeführt (DDPG oder TD3 bis jetzt, files in `agents\`)\
 Dann wird der `Trainer` (`trainer\trainer.py`) aufgerufen, welcher in `train()` über die Episoden iteriert.\
 In jeder Episode wird dann `agent.update()` aufgerufen (Update von Actor, Critic und Targets)\
+
+---
+
+Mögliche `object_type` in MuJoCo sind `[plane, hfield, sphere, capsule, ellipsoid, cylinder, box, mesh, sdf]`.
+
+Hier einige Beispiele:
+
+<table>
+  <tr>
+    <td align="center">
+      <img src="test_fixed.gif" width="300"/><br/>
+      <sub>Box</sub>
+    </td>
+    <td align="center">
+      <img src="test_sphere.gif" width="300"/><br/>
+      <sub>Sphere</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <img src="test_ellipsoid.gif" width="300"/><br/>
+      <sub>Ellipsoid</sub>
+    </td>
+    <td align="center">
+      <img src="test_capsule.gif" width="300"/><br/>
+      <sub>Capsule</sub>
+    </td>
+  </tr>
+</table>
