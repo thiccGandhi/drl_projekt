@@ -19,6 +19,7 @@
   "project_name": "rl_project",
   "run_name": "test",
   "env_name": "FetchPush-v4",
-  "agent": "td3",
-  "object_type": ""
+  "agent": "ddpg",
+  "object_type": "",
+  "save_agent_freq": 1000
 }

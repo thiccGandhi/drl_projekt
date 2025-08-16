@@ -54,14 +54,14 @@ class DDPGAgent(BaseAgent):
         :param noise: standard deviation of Gaussian noise
         :return: clipped action
         """
-        # If using HER, concatenate observation and desired_goal
-        if self.config.get("her", True):
-            obs_vec = np.concatenate([obs["observation"], obs["desired_goal"]])  #FIXED
-        else:
-            # If obs is a dict (no HER), get observation only
-            obs_vec = obs["observation"] if isinstance(obs, dict) else obs
+        # # If using HER, concatenate observation and desired_goal
+        # if self.config.get("her", True):
+        #     obs_vec = np.concatenate([obs["observation"], obs["desired_goal"]])  #FIXED
+        # else:
+        #     # If obs is a dict (no HER), get observation only
+        #     obs_vec = obs["observation"] if isinstance(obs, dict) else obs
 
-        obs_torch = torch.tensor(obs_vec, dtype=torch.float32).unsqueeze(0)
+        obs_torch = torch.tensor(obs, dtype=torch.float32).unsqueeze(0)
         self.actor.eval()  # Evaluation mode (no dropout, etc.)
         with torch.no_grad():
             action = self.actor(obs_torch).cpu().numpy()[0]

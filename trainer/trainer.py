@@ -35,8 +35,9 @@ class Trainer:
         self.success_rate = 0
         self.training_history = []   # List of dicts, one per episode
         self.eval_history = []       # List of (step, eval dict)
-        self.last_100_successes = deque(maxlen=100)
-        self.last_100_time_in_goal = deque(maxlen=100)
+        self.last_100_successes = deque([0.0] * 100, maxlen=100)
+        self.last_100_time_in_goal = deque([0.0] * 100, maxlen=100)
+        self.current_best_success_rate = 0
 
 
     def train(self):
@@ -54,6 +55,7 @@ class Trainer:
             episode_metrics = []
             final_info = {}
             time_in_goal = []
+            current_episode_data = []
 
             while self.episode_length < self.config["episode_length"]:
                 obs_flat = flatten_obs(obs, her=self.config.get("her", True))
@@ -74,6 +76,7 @@ class Trainer:
 
                 # Store in buffer
                 self.replay_buffer.store(obs, next_obs, act, rew, done)
+                current_episode_data.append((obs, next_obs, act, rew, done))
 
                 # Update current observation and stats
                 obs = next_obs
@@ -103,6 +106,31 @@ class Trainer:
                 success_rate, eval_reward = self.evaluate() # or reward
                 self.logger.log_eval({"eval/success_rate": success_rate, "eval/reward": eval_reward}, step=self.total_episodes) # idk
                 self.eval_history.append((self.total_episodes, success_rate))
+                
+            
+            save_options = []
+            
+            # Check for new best agent
+            new_best = np.mean(self.last_100_successes)
+            if self.current_best_success_rate < new_best:
+                self.current_best_success_rate = new_best
+                save_options.append("best")
+            
+            
+            # Check for freq episode agent
+            if self.total_episodes > 0 and self.total_episodes % self.config["save_agent_freq"] == 0:
+                num_freqk = self.total_episodes // self.config["save_agent_freq"]
+                save_options.append(num_freqk)
+                
+            
+            # If there is something to save, save/animate it
+            if save_options:
+                print(f"Number of episodes: {self.total_episodes}, save options: {save_options}")
+                current_animation = self.animate(self.agent)
+                for option in save_options:
+                    self.logger.save_agent(option, self.agent, current_episode_data, self.total_episodes)
+                    self.logger.save_animation(option, current_animation, self.total_episodes)
+            
 
             # train loss, success rate
             if episode_metrics:
@@ -126,6 +154,7 @@ class Trainer:
             self.total_episodes += 1
             self.episode_reward = 0
             self.episode_length = 0
+            current_episode_data = []  # Reset for next episode
 
     # this ecaluates only one episode, is that correct? 
     # suggestions:
@@ -224,5 +253,26 @@ class Trainer:
             print("nothing changed")
 
 
+    def animate(self, agent):
+        """Animate the agent's behavior in the environment as a gif.
 
+        :param agent: The trained agent to animate.
+        """
+        
+        obs, _ = self.env.reset()
+        obs_flat = flatten_obs(obs, her=self.config.get("her", True))
+        done = False
+        frames = []
 
+        while not done:
+            act = np.array(self.agent_select_action(obs_flat, explore=False), dtype=np.float32)
+            #obs, rew, done, info = self.env.step(act)
+            obs, reward, terminated, truncated, info = self.env.step(act)
+            obs_flat = flatten_obs(obs, her=self.config.get("her", True))
+            done = terminated or truncated
+            frame = self.env.render()
+            frames.append(frame)
+        
+        return frames
+    
+    

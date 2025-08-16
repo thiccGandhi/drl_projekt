@@ -14,11 +14,15 @@ from agents.td3 import TD3Agent
 from utils.logging import Logger
 from trainer.trainer import Trainer
 from utils.plotting import ResultsPlotter
+import os
+
+os.environ['MUJOCO_GL'] = 'egl'  # Use EGL for headless rendering
+os.environ['PYOPENGL_PLATFORM'] = 'egl' # Otherwise, issues with rendering
 
 config = json.load(open("configs/test.json"))
 
 gym.register_envs(gymnasium_robotics)
-env = gym.make(config["env_name"])
+env = gym.make(config["env_name"], render_mode="rgb_array")
 env.reset()
 
 geom_type_map = {

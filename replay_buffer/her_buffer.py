@@ -119,3 +119,19 @@ class HERBuffer:
             goal=self.goal_buffer[idxs],
             done=self.done_buffer[idxs],
         )
+        
+    
+    def clear(self):
+        """
+        Clears the HER buffer by resetting all arrays and indices.
+        """
+        self.obs1_buffer.fill(0)
+        self.obs2_buffer.fill(0)
+        self.action_buffer.fill(0)
+        self.reward_buffer.fill(0)
+        self.goal_buffer.fill(0)
+        self.done_buffer.fill(0)
+        self.idx = 0
+        self.size = 0
+        self.episode_transitions = []
+

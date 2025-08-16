@@ -100,4 +100,21 @@ class ReplayBuffer:
             done        = self.done_buffer[random_idxs],     # batch of done flags
             replay_type = self.type_buffer[random_idxs],     # batch of types (HER or not)
         )
-
+    
+    
+    def clear(self):
+        """
+        Clears the replay buffer by resetting all arrays and indices.
+        """
+        self.obs1_buffer.fill(0)
+        self.obs2_buffer.fill(0)
+        self.action_buffer.fill(0)
+        self.reward_buffer.fill(0)
+        self.goal_buffer.fill(0)
+        self.done_buffer.fill(0)
+        self.type_buffer.fill(0)
+        self.idx = 0
+        self.size = 0
+        
+        
+        
