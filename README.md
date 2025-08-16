@@ -51,3 +51,13 @@ Hier einige Beispiele:
     </td>
   </tr>
 </table>
+
+TOTO
+- example run or animation not just loss or reward
+- fix TD3, try with more trials and observe animations in runs (not throw an object from the table and knowing how to move)
+- The different seeds is something we can test with same or different seeds and see the effect (Test and then send an email after extensive testing)
+- The shape changes, the fact that they're changed in XML isn't a problem if the animations show it works (see phycics simulations with shape change)
+- The losses are not a good indicator of performance
+- Further control checks: is there any movement in the object -> Check gow the object moves, how the gripper moves after e.g. 10k steps
+- Additional control measures: Think about the geometric relations that you would get --> whatever closest distance that the arm gets to the object or the object gets to the precision, how much friction at the time the arm was touching object
+- It's basically about an object being touched and moved, so these measures can help
