@@ -81,8 +81,8 @@ def set_geom_shape(env, geom_name: str, new_type: str, new_size) -> int:
     mujoco.mj_forward(m, d)
     return gid
 
-
-# ---------- (optional) physics consistency: mass & diagonal inertia ----------
+# maybe we could use this a another parameter to change not sure if needed
+# ---------- physics consistency: mass & diagonal inertia ----------
 
 def set_body_mass_inertia_for_geom(env, geom_name: str, mass: float) -> tuple[int, np.ndarray]:
     """
@@ -152,3 +152,46 @@ def apply_override(env, name: str, typ: str, size, *, mass: float | None = None,
         out["body_inertia"] = I
         out["body_mass"] = float(mass)
     return out
+
+
+
+# --- just visual tests ---
+
+import json
+
+def _to_serializable(x):
+    try:
+        import numpy as _np
+        if isinstance(x, _np.ndarray):
+            return x.tolist()
+    except Exception:
+        pass
+    return x
+
+def jprint(tag: str, obj: dict):
+    """Stable JSON print for logs (handles numpy arrays)."""
+    print(tag, json.dumps(obj, indent=2, default=_to_serializable))
+
+def snapshot_geom_and_body(env, geom_name: str) -> dict:
+    """
+    Return a structured snapshot of the geom and its parent body
+    (what's effectively 'in the XML' after compile).
+    """
+    m, d = env.unwrapped.model, env.unwrapped.data
+    info = get_geom_info(env, geom_name)
+    bid = int(m.geom_bodyid[info["gid"]])
+    snap = {
+        "geom": {
+            "name": geom_name,
+            "gid": info["gid"],
+            "type": info["type"],
+            "size": info["size"].copy(),
+            "dataid": info["dataid"],
+        },
+        "body": {
+            "bid": bid,
+            "mass": float(m.body_mass[bid]),
+            "inertia_diag": m.body_inertia[bid].copy(),  # [Ixx, Iyy, Izz]
+        },
+    }
+    return snap
