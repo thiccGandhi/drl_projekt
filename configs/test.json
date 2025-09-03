@@ -1,4 +1,3 @@
-
 {
   "max_steps": 3000000,
   "min_steps": 10000,
@@ -21,5 +20,16 @@
   "env_name": "FetchPush-v4",
   "agent": "ddpg",
   "object_type": "",
-  "save_agent_freq": 1000
+  "save_agent_freq": 1000,
+  "override_object": {
+    "name": "object0",
+    "type": "ellipsoid",
+    "size": [
+      0.025,
+      0.02,
+      0.015
+    ],
+    "mass": 2.0,
+    "update_inertia": true
+  }
 }
