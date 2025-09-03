@@ -61,3 +61,17 @@ TOTO
 - Further control checks: is there any movement in the object -> Check gow the object moves, how the gripper moves after e.g. 10k steps
 - Additional control measures: Think about the geometric relations that you would get --> whatever closest distance that the arm gets to the object or the object gets to the precision, how much friction at the time the arm was touching object
 - It's basically about an object being touched and moved, so these measures can help
+
+
+<table>
+  <tr>
+    <td align="center">
+      <img src="before_override.gif" width="300"/><br/>
+      <sub>Before override</sub>
+    </td>
+    <td align="center">
+      <img src="after_override.gif" width="300"/><br/>
+      <sub>After override</sub>
+    </td>
+  </tr>
+</table>
