@@ -31,5 +31,14 @@
     ],
     "mass": 2.0,
     "update_inertia": true
+  },
+  "override_friction": {
+    "name": "object0",
+    "friction": [
+      0.8,
+      0.0,
+      0.0
+    ],
+    "condim": 1
   }
 }

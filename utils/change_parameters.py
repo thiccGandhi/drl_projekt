@@ -1,9 +1,24 @@
-# change_shape.py
-# Utilities to programmatically override a MuJoCo geom's shape in a live Gymnasium env.
+
+# Utilities to override a MuJoCo geom's shape and friction in a live Gymnasium env.
 
 from __future__ import annotations
+import json
 import numpy as np
 import mujoco
+
+# ---------- JSON printing ----------
+def _to_serializable(x):
+    try:
+        import numpy as _np
+        if isinstance(x, _np.ndarray):
+            return x.tolist()
+    except Exception:
+        pass
+    return x
+
+def jprint(tag: str, obj: dict):
+    """Stable JSON print for logs (handles numpy arrays)."""
+    print(tag, json.dumps(obj, indent=2, default=_to_serializable))
 
 
 # ---------- low-level helpers ----------
@@ -29,8 +44,8 @@ def _type_str_from_int(t_int: int) -> str:
 
 def get_geom_info(env, geom_name: str) -> dict:
     """
-    Read key fields of a geom from the live mjModel/mjData.
-    Returns: {'gid', 'type', 'size', 'dataid', 'body_id'}
+    Inspect key fields of a geom in the live mjModel/mjData.
+    Returns: {'gid','type','size','dataid','body_id','friction','condim'}
     """
     m, d = env.unwrapped.model, env.unwrapped.data
     gid = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_GEOM, geom_name)
@@ -38,9 +53,11 @@ def get_geom_info(env, geom_name: str) -> dict:
     return {
         "gid": gid,
         "type": _type_str_from_int(t_int),
-        "size": m.geom_size[gid].copy(),          # (3,) array
-        "dataid": int(m.geom_dataid[gid]),        # -1 unless mesh/hfield/etc.
+        "size": m.geom_size[gid].copy(),              # (3,)
+        "dataid": int(m.geom_dataid[gid]),            # -1 unless mesh/hfield/etc.
         "body_id": int(m.geom_bodyid[gid]),
+        "friction": m.geom_friction[gid].copy(),      # [slide, spin, roll]
+        "condim": int(m.geom_condim[gid]),            # # of friction dims used
     }
 
 
@@ -157,20 +174,6 @@ def apply_override(env, name: str, typ: str, size, *, mass: float | None = None,
 
 # --- just visual tests ---
 
-import json
-
-def _to_serializable(x):
-    try:
-        import numpy as _np
-        if isinstance(x, _np.ndarray):
-            return x.tolist()
-    except Exception:
-        pass
-    return x
-
-def jprint(tag: str, obj: dict):
-    """Stable JSON print for logs (handles numpy arrays)."""
-    print(tag, json.dumps(obj, indent=2, default=_to_serializable))
 
 def snapshot_geom_and_body(env, geom_name: str) -> dict:
     """
@@ -187,11 +190,88 @@ def snapshot_geom_and_body(env, geom_name: str) -> dict:
             "type": info["type"],
             "size": info["size"].copy(),
             "dataid": info["dataid"],
+            "friction": m.geom_friction[info["gid"]].copy(),
+            "condim": int(m.geom_condim[info["gid"]]),
         },
         "body": {
             "bid": bid,
             "mass": float(m.body_mass[bid]),
-            "inertia_diag": m.body_inertia[bid].copy(),  # [Ixx, Iyy, Izz]
+            "inertia_diag": m.body_inertia[bid].copy(),
         },
     }
     return snap
+
+
+
+# ---------- friction utils ----------
+
+def get_geom_friction(env, geom_name: str) -> np.ndarray:
+    """Return geom's friction vector [slide, spin, roll]."""
+    m = env.unwrapped.model
+    gid = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_GEOM, geom_name)
+    return m.geom_friction[gid].copy()
+
+def set_geom_friction(env,
+                      geom_name: str,
+                      friction: np.ndarray | list | tuple | None = None,
+                      *,
+                      slide: float | None = None,
+                      spin:  float | None = None,
+                      roll:  float | None = None,
+                      condim: int | None = None) -> int:
+    """
+    Set a geom's friction coefficients and optionally its condim.
+    - friction: iterable of length 3 -> [slide, spin, roll]
+    - or set any of slide/spin/roll individually.
+    - condim: 1 (sliding only) or 3 (sliding + spin + roll), etc.
+    Returns: geom id.
+    """
+    m, d = env.unwrapped.model, env.unwrapped.data
+    gid = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_GEOM, geom_name)
+
+    vec = m.geom_friction[gid].copy()
+    if friction is not None:
+        fr = np.asarray(friction, dtype=float).reshape(3)
+        vec[:] = fr
+    if slide is not None: vec[0] = float(slide)
+    if spin  is not None: vec[1] = float(spin)
+    if roll  is not None: vec[2] = float(roll)
+    # non-negativity guard
+    vec = np.maximum(vec, 0.0)
+    m.geom_friction[gid] = vec
+
+    if condim is not None:
+        m.geom_condim[gid] = int(condim)
+
+    mujoco.mj_forward(m, d)
+    return gid
+
+def assert_friction(env, geom_name: str, expect, atol: float = 1e-9) -> tuple[bool, np.ndarray]:
+    """Check the geom's friction matches expected (length-3)."""
+    fr = get_geom_friction(env, geom_name)
+    ok = np.allclose(fr, np.asarray(expect, float).reshape(3), atol=atol, rtol=0.0)
+    return ok, fr
+
+def contact_friction_product(env, geom_a: str, geom_b: str) -> np.ndarray:
+    """
+    Compute the effective contact friction (element-wise product) that would be used
+    between two geoms, ignoring any pair-specific overrides.
+    """
+    fa = get_geom_friction(env, geom_a)
+    fb = get_geom_friction(env, geom_b)
+    return fa * fb
+
+def apply_friction_override(env, name: str, friction, condim: int | None = None,
+                            atol: float = 1e-9) -> dict:
+    """
+    One-shot friction override with assertion; returns before/after.
+    """
+    before = get_geom_info(env, name)
+    set_geom_friction(env, name, friction=friction, condim=condim)
+    ok, fr_after = assert_friction(env, name, friction, atol=atol)
+    after = get_geom_info(env, name)
+    return {
+        "ok": ok,
+        "before": {"friction": before["friction"], "condim": before["condim"]},
+        "after":  {"friction": fr_after,           "condim": after["condim"]},
+    }
