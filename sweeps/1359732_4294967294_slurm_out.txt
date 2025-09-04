@@ -1,0 +1,18 @@
+Submitting array 0-23 for CFG_DIR=/home/ul/ul_student/ul_cep22/my_folders/drl_projekt/sweeps/latest
+Submitted batch job 1359741
+Submitted. Exiting submitter.
+
+============================= JOB FEEDBACK =============================
+
+NodeName=uc3n003
+Job ID: 1359732
+Cluster: uc3
+User/Group: ul_cep22/ul_student
+State: COMPLETED (exit code 0)
+Nodes: 1
+Cores per node: 8
+CPU Utilized: 00:00:00
+CPU Efficiency: 0.00% of 00:02:16 core-walltime
+Job Wall-clock time: 00:00:17
+Memory Utilized: 10.01 MB
+Memory Efficiency: 0.03% of 32.00 GB (32.00 GB/node)

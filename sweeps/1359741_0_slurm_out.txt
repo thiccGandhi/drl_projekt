@@ -1,0 +1,1 @@
+[Thu Sep  4 10:11:54 PM CEST 2025] Node: uc3n004 | Task 0 | CFG_PATH=/home/ul/ul_student/ul_cep22/my_folders/drl_projekt/sweeps/latest/cfg_000.json

@@ -1,0 +1,39 @@
+{
+  "project_name": "rl_project",
+  "run_name": "test__FetchPush-v4__sac__fric_mu0.40_cd1",
+  "env_name": "FetchPush-v4",
+  "render_mode": "rgb_array",
+  "agent": "sac",
+  "seed": 42,
+  "device": "cpu",
+  "max_steps": 3000000,
+  "min_steps": 10000,
+  "episode_length": 50,
+  "eval_freq": 10,
+  "update_after": 1000,
+  "buffer_size": 1000000,
+  "batch_size": 100,
+  "lr_actor": 0.0003,
+  "lr_critic": 0.0003,
+  "discount": 0.99,
+  "tau": 0.005,
+  "gamma": 0.99,
+  "exploration_noise": 0.1,
+  "save_agent_freq": 1000,
+  "learning_rate": 0.001,
+  "object_type": "",
+  "her": true,
+  "hidden_layers": [
+    256,
+    256
+  ],
+  "override_friction": {
+    "name": "object0",
+    "friction": [
+      0.4,
+      0.0,
+      0.0
+    ],
+    "condim": 1
+  }
+}

@@ -1,0 +1,45 @@
+/home/ul/ul_student/ul_cep22/my_folders/drl_venv_py312/lib64/python3.12/site-packages/gymnasium/envs/registration.py:636: UserWarning: [33mWARN: Overriding environment Reacher-v2 already in registry.[0m
+  logger.warn(f"Overriding environment {new_spec.id} already in registry.")
+/home/ul/ul_student/ul_cep22/my_folders/drl_venv_py312/lib64/python3.12/site-packages/gymnasium/envs/registration.py:636: UserWarning: [33mWARN: Overriding environment Pusher-v2 already in registry.[0m
+  logger.warn(f"Overriding environment {new_spec.id} already in registry.")
+/home/ul/ul_student/ul_cep22/my_folders/drl_venv_py312/lib64/python3.12/site-packages/gymnasium/envs/registration.py:636: UserWarning: [33mWARN: Overriding environment InvertedPendulum-v2 already in registry.[0m
+  logger.warn(f"Overriding environment {new_spec.id} already in registry.")
+/home/ul/ul_student/ul_cep22/my_folders/drl_venv_py312/lib64/python3.12/site-packages/gymnasium/envs/registration.py:636: UserWarning: [33mWARN: Overriding environment InvertedDoublePendulum-v2 already in registry.[0m
+  logger.warn(f"Overriding environment {new_spec.id} already in registry.")
+/home/ul/ul_student/ul_cep22/my_folders/drl_venv_py312/lib64/python3.12/site-packages/gymnasium/envs/registration.py:636: UserWarning: [33mWARN: Overriding environment HalfCheetah-v2 already in registry.[0m
+  logger.warn(f"Overriding environment {new_spec.id} already in registry.")
+/home/ul/ul_student/ul_cep22/my_folders/drl_venv_py312/lib64/python3.12/site-packages/gymnasium/envs/registration.py:636: UserWarning: [33mWARN: Overriding environment HalfCheetah-v3 already in registry.[0m
+  logger.warn(f"Overriding environment {new_spec.id} already in registry.")
+/home/ul/ul_student/ul_cep22/my_folders/drl_venv_py312/lib64/python3.12/site-packages/gymnasium/envs/registration.py:636: UserWarning: [33mWARN: Overriding environment Hopper-v2 already in registry.[0m
+  logger.warn(f"Overriding environment {new_spec.id} already in registry.")
+/home/ul/ul_student/ul_cep22/my_folders/drl_venv_py312/lib64/python3.12/site-packages/gymnasium/envs/registration.py:636: UserWarning: [33mWARN: Overriding environment Hopper-v3 already in registry.[0m
+  logger.warn(f"Overriding environment {new_spec.id} already in registry.")
+/home/ul/ul_student/ul_cep22/my_folders/drl_venv_py312/lib64/python3.12/site-packages/gymnasium/envs/registration.py:636: UserWarning: [33mWARN: Overriding environment Swimmer-v2 already in registry.[0m
+  logger.warn(f"Overriding environment {new_spec.id} already in registry.")
+/home/ul/ul_student/ul_cep22/my_folders/drl_venv_py312/lib64/python3.12/site-packages/gymnasium/envs/registration.py:636: UserWarning: [33mWARN: Overriding environment Swimmer-v3 already in registry.[0m
+  logger.warn(f"Overriding environment {new_spec.id} already in registry.")
+/home/ul/ul_student/ul_cep22/my_folders/drl_venv_py312/lib64/python3.12/site-packages/gymnasium/envs/registration.py:636: UserWarning: [33mWARN: Overriding environment Walker2d-v2 already in registry.[0m
+  logger.warn(f"Overriding environment {new_spec.id} already in registry.")
+/home/ul/ul_student/ul_cep22/my_folders/drl_venv_py312/lib64/python3.12/site-packages/gymnasium/envs/registration.py:636: UserWarning: [33mWARN: Overriding environment Walker2d-v3 already in registry.[0m
+  logger.warn(f"Overriding environment {new_spec.id} already in registry.")
+/home/ul/ul_student/ul_cep22/my_folders/drl_venv_py312/lib64/python3.12/site-packages/gymnasium/envs/registration.py:636: UserWarning: [33mWARN: Overriding environment Ant-v2 already in registry.[0m
+  logger.warn(f"Overriding environment {new_spec.id} already in registry.")
+/home/ul/ul_student/ul_cep22/my_folders/drl_venv_py312/lib64/python3.12/site-packages/gymnasium/envs/registration.py:636: UserWarning: [33mWARN: Overriding environment Ant-v3 already in registry.[0m
+  logger.warn(f"Overriding environment {new_spec.id} already in registry.")
+/home/ul/ul_student/ul_cep22/my_folders/drl_venv_py312/lib64/python3.12/site-packages/gymnasium/envs/registration.py:636: UserWarning: [33mWARN: Overriding environment Humanoid-v2 already in registry.[0m
+  logger.warn(f"Overriding environment {new_spec.id} already in registry.")
+/home/ul/ul_student/ul_cep22/my_folders/drl_venv_py312/lib64/python3.12/site-packages/gymnasium/envs/registration.py:636: UserWarning: [33mWARN: Overriding environment Humanoid-v3 already in registry.[0m
+  logger.warn(f"Overriding environment {new_spec.id} already in registry.")
+/home/ul/ul_student/ul_cep22/my_folders/drl_venv_py312/lib64/python3.12/site-packages/gymnasium/envs/registration.py:636: UserWarning: [33mWARN: Overriding environment HumanoidStandup-v2 already in registry.[0m
+  logger.warn(f"Overriding environment {new_spec.id} already in registry.")
+wandb: Currently logged in as: r-kasrawi (t_p-universit-t-ulm) to https://api.wandb.ai. Use `wandb login --relogin` to force relogin
+wandb: Tracking run with wandb version 0.21.0
+wandb: Run data is saved locally in wandb/test__FetchPush-v4__ddpg__baseline__FetchPush-v4__ddpg__J1359742__A0__cfg_000__20250904_221159/wandb/run-20250904_221200-0mnhl8ao
+wandb: Run `wandb offline` to turn off syncing.
+wandb: Syncing run test__FetchPush-v4__ddpg__baseline__FetchPush-v4__ddpg__J1359742__A0__cfg_000__20250904_221159
+wandb: ⭐️ View project at https://wandb.ai/t_p-universit-t-ulm/rl_project
+wandb: 🚀 View run at https://wandb.ai/t_p-universit-t-ulm/rl_project/runs/0mnhl8ao
+wandb: WARNING Tried to log to step 1000 that is less than the current step 1001. Steps must be monotonically increasing, so this data will be ignored. See https://wandb.me/define-metric to log data out of order.
+wandb: WARNING Tried to log to step 2000 that is less than the current step 2001. Steps must be monotonically increasing, so this data will be ignored. See https://wandb.me/define-metric to log data out of order.
+wandb: WARNING Tried to log to step 3000 that is less than the current step 3001. Steps must be monotonically increasing, so this data will be ignored. See https://wandb.me/define-metric to log data out of order.
+wandb: WARNING Tried to log to step 4000 that is less than the current step 4001. Steps must be monotonically increasing, so this data will be ignored. See https://wandb.me/define-metric to log data out of order.
