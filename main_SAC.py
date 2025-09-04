@@ -13,7 +13,7 @@ from replay_buffer.her_buffer import HERBuffer
 from agents.ddpg import DDPGAgent
 from agents.td3 import TD3Agent
 from agents.sac import SACAgent
-from utils.logging import Logger
+from utils.mylogging import Logger
 from trainer.trainer import Trainer
 from utils.plotting import ResultsPlotter
 
