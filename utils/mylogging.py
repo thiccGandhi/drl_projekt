@@ -5,6 +5,7 @@ import pickle
 import imageio
 import copy
 from datetime import datetime
+import uuid
 import wandb
 
 class Logger:
@@ -20,8 +21,8 @@ class Logger:
         parts = [prefix]
 
         # Include env/agent if present in config (helps grouping)
-        if "env_name" in config:
-            parts.append(config["env_name"])
+        # if "env_name" in config:
+        #     parts.append(config["env_name"])
         if "agent" in config:
             parts.append(config["agent"])
 
@@ -36,13 +37,23 @@ class Logger:
         if cfg_path:
             parts.append(os.path.splitext(os.path.basename(cfg_path))[0])
 
-        # Timestamp for final uniqueness
+        # Timestamp + short uuid suffix for final uniqueness
         parts.append(datetime.now().strftime("%Y%m%d_%H%M%S"))
+        parts.append(uuid.uuid4().hex[:6])   # NEW: avoids collisions after deletions
         run_name = "__".join(parts)
 
         # Ensure local dir exists; store each run in its own subdir
         run_dir = os.path.join(self.log_dir, run_name)
         os.makedirs(run_dir, exist_ok=True)
+
+        # These can leak from shells, notebooks, or prior runs
+        for k in ("WANDB_RUN_ID", "WANDB_RESUME"):
+            os.environ.pop(k, None)
+        # Be explicit anyway:
+        os.environ["WANDB_RESUME"] = "never"
+
+        # Generate a fresh run id ourselves to guarantee uniqueness
+        fresh_id = uuid.uuid4().hex
 
         # Initialize W&B
         self.run = wandb.init(
@@ -51,7 +62,10 @@ class Logger:
             name=run_name,
             config=config,
             dir=run_dir,
-            resume="never",
+            id=fresh_id,
+            resume="never", 
+            reinit=True,
+            settings=wandb.Settings(start_method="thread"),
         )
 
     def log_episode(self, metrics, step):
@@ -62,7 +76,8 @@ class Logger:
 
     def save_agent(self, option, agent, episode_data, episode_counter):
         """Save agent (without buffer) + episode_data as a W&B artifact."""
-        agent_to_save = copy.copy(agent)
+        import copy as _copy
+        agent_to_save = _copy.copy(agent)
         agent_to_save.replay_buffer = None
 
         if option == "best":
@@ -72,7 +87,6 @@ class Logger:
         else:
             raise ValueError("Option must be 'best' or an integer.")
 
-        # Name artifact uniquely per run
         artifact_name = f"agent-{self.run.id}"
 
         with tempfile.TemporaryDirectory() as tmpdir:

@@ -1,4 +1,7 @@
-# main_pars.py — unified, minimal, reproducible
+# main_pars.py — unified, minimal, reproducible (curved-shape safe)
+
+import warnings
+warnings.filterwarnings("ignore", category=UserWarning, module="gymnasium.envs.registration")
 
 import os, sys, json, logging, random
 from copy import deepcopy
@@ -14,8 +17,10 @@ sys.path.append("/home/ul/ul_student/ul_cep22/my_folders/drl_projekt")
 
 from utils.change_parameters import (
     jprint, snapshot_geom_and_body,
-    apply_override, apply_friction_override,
+    apply_overrides_from_config, apply_friction_override,
     contact_friction_product,
+    # extra utils for physics guards
+    get_geom_info, get_geom_friction, set_geom_friction,
 )
 
 from networks.actor import Actor
@@ -24,29 +29,25 @@ from replay_buffer.her_buffer import HERBuffer
 from agents.ddpg import DDPGAgent
 from agents.td3 import TD3Agent
 from agents.sac import SACAgent
-from drl_projekt.utils.mylogging import Logger
+from utils.mylogging import Logger
 from trainer.trainer import Trainer
 from utils.plotting import ResultsPlotter
-
 
 # ---------- system / mujoco setup ----------
 os.environ["MUJOCO_GL"] = "egl"
 os.environ["PYOPENGL_PLATFORM"] = "egl"
 logging.getLogger("mujoco").setLevel(logging.ERROR)
 
-
 # ---------- config ----------
 DEFAULT_CONFIG = "/home/ul/ul_student/ul_cep22/my_folders/drl_projekt/configs/test.json"
 CONFIG_PATH = os.environ.get("CFG_PATH", DEFAULT_CONFIG)
 config = json.load(open(CONFIG_PATH))
-
 
 # ---------- seeding ----------
 SEED = int(config.get("seed", 42))
 random.seed(SEED)
 np.random.seed(SEED)
 torch.manual_seed(SEED)
-
 
 # ---------- env ----------
 gym.register_envs(gymnasium_robotics)
@@ -56,54 +57,65 @@ env.action_space.seed(SEED)
 env.observation_space.seed(SEED)
 obs, info = env.reset(seed=SEED)  # seed sim state
 
+# ---------- apply geometry overrides ----------
+snaps = apply_overrides_from_config(env, config, geom_name="object0",
+                                    reseed_after=True, seed=SEED)
+jprint("[BEFORE  XML/COMPILED]", snaps["before"])
+jprint("[AFTER   OVERRIDES]",    snaps["after"])
 
-# ---------- BEFORE: compiled (XML-derived) state ----------
-snap_before = snapshot_geom_and_body(env, "object0")
-jprint("[BEFORE  XML/COMPILED]", snap_before)
+# =========================================================
+# Curved-object contact guards: ensure spin/roll active on BOTH sides
+# =========================================================
 
-# persist initial info (useful for W&B / logs)
-config["object_gid"]            = snap_before["geom"]["gid"]
-config["object_type_initial"]   = snap_before["geom"]["type"]
-config["object_size_initial"]   = snap_before["geom"]["size"]
-config["body_mass_initial"]     = snap_before["body"]["mass"]
-config["body_inertia_initial"]  = snap_before["body"]["inertia_diag"]
-config["friction_initial"]      = snap_before["geom"]["friction"]
-config["condim_initial"]        = snap_before["geom"]["condim"]
+def _is_curved(t: str) -> bool:
+    return t in ("sphere", "ellipsoid")
 
+def _find_geoms(env, substr):
+    m = env.unwrapped.model
+    out = []
+    for gid in range(m.ngeom):
+        nm = mujoco.mj_id2name(m, mujoco.mjtObj.mjOBJ_GEOM, gid) or ""
+        if substr in nm:
+            out.append(nm)
+    return out
 
-# ---------- SHAPE OVERRIDE (type/size [+ optional inertials]) ----------
-ovr = config.get("override_object")
-if ovr:
-    jprint("[REQUESTED SHAPE OVERRIDE]", {
-        "name": ovr.get("name", "object0"),
-        "type": ovr.get("type"),
-        "size": ovr.get("size"),
-        "mass": ovr.get("mass", None),
-        "update_inertia": bool(ovr.get("update_inertia", False)),
-    })
-    res_shape = apply_override(
+# 1) If object0 is curved, enforce condim=3 and nonzero spin/roll
+obj = get_geom_info(env, "object0")
+if _is_curved(obj["type"]):
+    fr = obj["friction"].copy()
+    # minima that work robustly with rolling bodies
+    fr[1] = max(fr[1], 0.10)  # spin
+    fr[2] = max(fr[2], 0.05)  # roll
+    set_geom_friction(env, "object0", friction=fr, condim=3)
+
+# 2) Make table/floor provide spin/roll too (condim=3)
+support_names = list(set(_find_geoms(env, "table") + _find_geoms(env, "floor")))
+for nm in support_names:
+    try:
+        set_geom_friction(env, nm, friction=[1.0, 0.10, 0.05], condim=3)
+    except Exception:
+        pass
+
+# 3) If config gave an explicit friction override, sanitize for curved objects
+fovr = config.get("override_friction")
+if fovr and _is_curved(get_geom_info(env, "object0")["type"]):
+    fr = list(map(float, fovr.get("friction", [0.8, 0.0, 0.0])))
+    if fr[1] <= 0.0: fr[1] = 0.10
+    if fr[2] <= 0.0: fr[2] = 0.05
+    fovr["friction"] = fr
+    fovr["condim"]   = max(int(fovr.get("condim", 1)), 3)
+    res_fric = apply_friction_override(
         env,
-        name=ovr.get("name", "object0"),
-        typ=ovr["type"],
-        size=ovr["size"],
-        mass=ovr.get("mass", None),
-        update_inertia=bool(ovr.get("update_inertia", False)),
+        name=fovr.get("name", "object0"),
+        friction=fovr["friction"],
+        condim=fovr["condim"],
         atol=1e-9,
     )
-    jprint("[AFTER  SHAPE]", {"ok": res_shape["ok"], "after": res_shape["after"]})
-
-    snap_shape = snapshot_geom_and_body(env, ovr.get("name", "object0"))
-    config["object_type_final"]      = snap_shape["geom"]["type"]
-    config["object_size_final"]      = snap_shape["geom"]["size"]
-    config["body_mass_final"]        = snap_shape["body"]["mass"]
-    config["body_inertia_final"]     = snap_shape["body"]["inertia_diag"]
-    config["object_inertia_updated"] = res_shape["inertia_updated"]
-
-
-# ---------- FRICTION OVERRIDE ([slide, spin, roll] + condim) ----------
-# e.g. "override_friction": {"name":"object0","friction":[0.8,0.0,0.0],"condim":1}
-fovr = config.get("override_friction")
-if fovr:
+    jprint("[AFTER  FRICTION (SANITIZED)]", res_fric)
+    config["friction_final"] = res_fric["after"]["friction"]
+    config["condim_final"]   = res_fric["after"]["condim"]
+elif fovr:
+    # non-curved: apply as-is (your original behavior)
     jprint("[REQUESTED FRICTION OVERRIDE]", fovr)
     res_fric = apply_friction_override(
         env,
@@ -116,13 +128,29 @@ if fovr:
     config["friction_final"] = res_fric["after"]["friction"]
     config["condim_final"]   = res_fric["after"]["condim"]
 
-    # optional diagnostic: effective friction vs table geom (adjust name if needed)
-    try:
-        eff = contact_friction_product(env, fovr.get("name", "object0"), "geom_22")
-        jprint("[CONTACT FRICTION object0 x table]", {"effective": eff.tolist()})
-    except Exception:
-        pass
+# 4) Quick diagnostics and assert: condim_used must be 3 for curved
+if _is_curved(get_geom_info(env, "object0")["type"]):
+    def _contact_effective(ga, gb):
+        fa = get_geom_friction(env, ga);  ca = get_geom_info(env, ga)["condim"]
+        fb = get_geom_friction(env, gb);  cb = get_geom_info(env, gb)["condim"]
+        return (fa * fb, min(ca, cb))
+    used = []
+    for nm in support_names:
+        eff, used_cd = _contact_effective("object0", nm)
+        jprint(f"[CONTACT object0 x {nm}]", {
+            "fa": get_geom_friction(env, "object0").tolist(),
+            "fb": get_geom_friction(env, nm).tolist(),
+            "eff": eff.tolist(),
+            "condim_used": int(used_cd),
+        })
+        used.append(int(used_cd))
+    assert all(u == 3 for u in used), f"condim_used!=3 somewhere: {used}"
 
+# 5) Re-seed + settle to remove micro-bounces contaminating HER
+obs, info = env.reset(seed=SEED)
+_zero = np.zeros(env.action_space.shape, dtype=np.float32)
+for _ in range(300):
+    env.step(_zero)
 
 # ---------- RL wiring ----------
 obs_dim  = env.observation_space["observation"].shape[0]
